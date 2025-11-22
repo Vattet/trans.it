@@ -1,9 +1,31 @@
 <?php
 
+use App\Http\Controllers\LienController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\UserController;
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect('/api/documentation');
+});
+
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    Route::get('/api/documents/{id}', [DocumentController::class, 'show']);
+    Route::post('/api/documents', [DocumentController::class, 'store']);
+    Route::put('/api/documents/{id}', [DocumentController::class, 'update']);
+    Route::delete('/api/documents/{id}', [DocumentController::class, 'destroy']);
+
+    Route::get('/api/users/{id}', [UserController::class, 'show']);
+    Route::post('/api/users', [UserController::class, 'store']);
+    Route::put('/api/users/{id}', [UserController::class, 'update']);
+    Route::delete('/api/users/{id}', [UserController::class, 'destroy']);
+    Route::get('/documents/{id}/link', [LienController::class, 'getByDocument']);
+
+    Route::post('/links', [LienController::class, 'store']);
+    Route::put('/links/{id}', [LienController::class, 'update']);
+    Route::delete('/links/{id}', [LienController::class, 'destroy']);
 });
 
 /*

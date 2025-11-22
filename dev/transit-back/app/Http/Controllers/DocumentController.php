@@ -4,16 +4,35 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Helpers\DocumentHelper;
-use Illuminate\Support\Facades\Auth;
+use OpenApi\Attributes as OA;
 
 class DocumentController extends Controller
 {
-
-    public function __construct()
-    {
-        $this->middleware('auth:sanctum'); 
-    }
-
+    /**
+     * @OA\Get(
+     *     path="/api/documents/{id}",
+     *     summary="Récupère un document via son ID",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID du document",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document trouvé"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Document non trouvé"
+     *     )
+     * )
+     */
     public function show($id)
     {
         $document = DocumentHelper::GetDocumentById($id);
@@ -25,6 +44,35 @@ class DocumentController extends Controller
         return response()->json($document);
     }
 
+    /**
+     * @OA\Post(
+     *     path="/api/documents",
+     *     summary="Créer un nouveau document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\RequestBody(
+     *         required=true,
+     *         @OA\JsonContent(
+     *             required={"Id_User", "Nom_document", "Chemin_stockage", "Tailles_MB"},
+     *             @OA\Property(property="Id_User", type="integer", example=1),
+     *             @OA\Property(property="Nom_document", type="string", example="monfichier.pdf"),
+     *             @OA\Property(property="Chemin_stockage", type="string", example="/uploads/documents/abc.pdf"),
+     *             @OA\Property(property="Tailles_MB", type="number", format="float", example=3.25),
+     *             @OA\Property(property="IsActive", type="boolean", example=true)
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=201,
+     *         description="Document créé avec succès"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur lors de la création"
+     *     )
+     * )
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -43,6 +91,41 @@ class DocumentController extends Controller
         return response()->json(['status' => $status], $status === 'success' ? 201 : 400);
     }
 
+    /**
+     * @OA\Put(
+     *     path="/api/documents/{id}",
+     *     summary="Mettre à jour un document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID du document à mettre à jour",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\RequestBody(
+     *         required=false,
+     *         @OA\JsonContent(
+     *             @OA\Property(property="Nom_document", type="string", example="nouveau_nom.pdf"),
+     *             @OA\Property(property="Chemin_stockage", type="string", example="/uploads/documents/new.pdf"),
+     *             @OA\Property(property="Tailles_MB", type="number", example=5.75),
+     *             @OA\Property(property="IsActive", type="boolean", example=true)
+     *         )
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document mis à jour"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur lors de la mise à jour"
+     *     )
+     * )
+     */
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -63,6 +146,31 @@ class DocumentController extends Controller
         return response()->json(['status' => 'success']);
     }
 
+    /**
+     * @OA\Delete(
+     *     path="/api/documents/{id}",
+     *     summary="Supprimer un document",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID du document",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Document supprimé"
+     *     ),
+     *     @OA\Response(
+     *         response=400,
+     *         description="Erreur lors de la suppression"
+     *     )
+     * )
+     */
     public function destroy($id)
     {
         $status = DocumentHelper::DeleteDocumentById($id);
