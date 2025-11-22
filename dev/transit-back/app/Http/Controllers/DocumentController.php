@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Helpers\DocumentHelper;
+use App\Models\Document;
 use OpenApi\Attributes as OA;
 
 class DocumentController extends Controller
