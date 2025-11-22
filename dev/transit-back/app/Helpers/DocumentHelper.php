@@ -6,6 +6,16 @@ use App\Models\Document;
 
 class DocumentHelper
 {
+    public static function GetAllDocument()
+    {
+        return Document::all();
+    }
+
+    public static function GetAllDocumentByUserId($idUser)
+    {
+        return Document::where('Id_User', $idUser)->get();
+    }
+
     public static function InsertDoc(array $data)
     {
         $document = Document::create($data);

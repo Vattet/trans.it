@@ -4,28 +4,34 @@ use App\Http\Controllers\LienController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AuthController;
 
 Route::get('/', function () {
     return redirect('/api/documentation');
 });
 
+Route::post('/api/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
-
+    Route::get('/api/documents', [DocumentController::class, 'getAll']);
     Route::get('/api/documents/{id}', [DocumentController::class, 'show']);
+    Route::get('/api/documents/{id}/link', [LienController::class, 'getByDocument']);
     Route::post('/api/documents', [DocumentController::class, 'store']);
     Route::put('/api/documents/{id}', [DocumentController::class, 'update']);
     Route::delete('/api/documents/{id}', [DocumentController::class, 'destroy']);
-
+    
+    Route::get('/api/users/{id}/documents', [DocumentController::class, 'getAllByUser']);
+    Route::get('/api/users', [UserController::class, 'getAll']);
     Route::get('/api/users/{id}', [UserController::class, 'show']);
     Route::post('/api/users', [UserController::class, 'store']);
     Route::put('/api/users/{id}', [UserController::class, 'update']);
     Route::delete('/api/users/{id}', [UserController::class, 'destroy']);
-    Route::get('/documents/{id}/link', [LienController::class, 'getByDocument']);
 
-    Route::post('/links', [LienController::class, 'store']);
-    Route::put('/links/{id}', [LienController::class, 'update']);
-    Route::delete('/links/{id}', [LienController::class, 'destroy']);
+    Route::post('/api/links', [LienController::class, 'store']);
+    Route::get('/api/links', [LienController::class, 'getAll']);
+    Route::get('/api/users/{id}/links', [LienController::class, 'getAllByUser']);
+    Route::put('/api/links/{id}', [LienController::class, 'update']);
+    Route::delete('/api/links/{id}', [LienController::class, 'destroy']);
 });
 
 /*

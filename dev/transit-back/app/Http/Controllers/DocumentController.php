@@ -10,6 +10,59 @@ class DocumentController extends Controller
 {
     /**
      * @OA\Get(
+     *     path="/api/documents",
+     *     summary="Récupérer tous les documents",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste de tous les documents"
+     *     )
+     * )
+     */
+    public function getAll()
+    {
+        $documents = DocumentHelper::GetAllDocument();
+        return response()->json($documents);
+    }
+    /**
+     * @OA\Get(
+     *     path="/api/users/{id}/documents",
+     *     summary="Récupérer tous les documents appartenant à un utilisateur",
+     *     tags={"Documents"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID de l'utilisateur",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des documents appartenant à l'utilisateur"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Aucun document trouvé pour cet utilisateur"
+     *     )
+     * )
+     */
+    public function getAllByUser($id)
+    {
+        $documents = DocumentHelper::GetAllDocumentByUserId($id);
+
+        if (!$documents || count($documents) === 0) {
+            return response()->json(['message' => 'No documents found for this user'], 404);
+        }
+
+        return response()->json($documents);
+    }
+    /**
+     * @OA\Get(
      *     path="/api/documents/{id}",
      *     summary="Récupère un document via son ID",
      *     tags={"Documents"},
@@ -76,15 +129,15 @@ class DocumentController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'Id_User'        => 'required|integer',
-            'Nom_document'   => 'required|string|max:255',
-            'Chemin_stockage'=> 'required|string|max:500',
-            'Tailles_MB'     => 'required|numeric',
-            'IsActive'       => 'boolean',
+            'Id_User' => 'required|integer',
+            'Nom_document' => 'required|string|max:255',
+            'Chemin_stockage' => 'required|string|max:500',
+            'Tailles_MB' => 'required|numeric',
+            'IsActive' => 'boolean',
         ]);
 
         $validated['Date_Creation'] = now();
-        $validated['Date_Update']   = now();
+        $validated['Date_Update'] = now();
 
         $status = DocumentHelper::InsertDoc($validated);
 
@@ -129,10 +182,10 @@ class DocumentController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'Nom_document'   => 'sometimes|string|max:255',
-            'Chemin_stockage'=> 'sometimes|string|max:500',
-            'Tailles_MB'     => 'sometimes|numeric',
-            'IsActive'       => 'sometimes|boolean',
+            'Nom_document' => 'sometimes|string|max:255',
+            'Chemin_stockage' => 'sometimes|string|max:500',
+            'Tailles_MB' => 'sometimes|numeric',
+            'IsActive' => 'sometimes|boolean',
         ]);
 
         $validated['Date_Update'] = now();

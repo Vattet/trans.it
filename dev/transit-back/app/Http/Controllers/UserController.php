@@ -9,6 +9,26 @@ class UserController extends Controller
 {
     /**
      * @OA\Get(
+     *     path="/api/users",
+     *     summary="Récupérer tous les utilisateurs",
+     *     tags={"Users"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste complète des utilisateurs"
+     *     )
+     * )
+     */
+    public function getAll()
+    {
+        $users = UserHelper::GetAllUser();
+
+        return response()->json($users);
+    }
+
+    /**
+     * @OA\Get(
      *     path="/api/users/{id}",
      *     summary="Récupère un utilisateur via son ID",
      *     tags={"Users"},
@@ -75,16 +95,16 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'Nom'          => 'required|string|max:100',
-            'Prenom'       => 'required|string|max:100',
-            'Email'        => 'required|email|max:255',
+            'Nom' => 'required|string|max:100',
+            'Prenom' => 'required|string|max:100',
+            'Email' => 'required|email|max:255',
             'Mot_de_passe' => 'required|string|min:4',
-            'IsActive'     => 'boolean',
+            'IsActive' => 'boolean',
         ]);
 
         $validated['Date_Creation'] = now();
-        $validated['Date_Update']   = now();
-        $validated['Mot_de_passe']  = bcrypt($validated['Mot_de_passe']);
+        $validated['Date_Update'] = now();
+        $validated['Mot_de_passe'] = bcrypt($validated['Mot_de_passe']);
 
         $status = UserHelper::InsertUser($validated);
 
@@ -129,11 +149,11 @@ class UserController extends Controller
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'Nom'          => 'sometimes|string|max:100',
-            'Prenom'       => 'sometimes|string|max:100',
-            'Email'        => 'sometimes|email|max:255',
+            'Nom' => 'sometimes|string|max:100',
+            'Prenom' => 'sometimes|string|max:100',
+            'Email' => 'sometimes|email|max:255',
             'Mot_de_passe' => 'sometimes|string|min:4',
-            'IsActive'     => 'sometimes|boolean',
+            'IsActive' => 'sometimes|boolean',
         ]);
 
         if (isset($validated['Mot_de_passe'])) {

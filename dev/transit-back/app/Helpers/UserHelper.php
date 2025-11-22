@@ -6,6 +6,10 @@ use App\Models\User;
 
 class UserHelper
 {
+    public static function GetAllUser()
+    {
+        return User::all();
+    }
 
     public static function InsertUser(array $data)
     {

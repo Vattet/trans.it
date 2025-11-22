@@ -182,4 +182,60 @@ class LienController extends Controller
 
         return response()->json(['status' => 'success']);
     }
+    /**
+     * @OA\Get(
+     *     path="/api/links",
+     *     summary="Récupérer tous les liens",
+     *     tags={"Liens"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste de tous les liens"
+     *     )
+     * )
+     */
+    public function getAll()
+    {
+        $links = LienHelper::GetAllLink();
+
+        return response()->json($links);
+    }
+
+    /**
+     * @OA\Get(
+     *     path="/api/users/{id}/links",
+     *     summary="Récupérer tous les liens d’un utilisateur",
+     *     tags={"Liens"},
+     *     security={{"bearerAuth":{}}},
+     *
+     *     @OA\Parameter(
+     *         name="id",
+     *         in="path",
+     *         required=true,
+     *         description="ID de l'utilisateur",
+     *         @OA\Schema(type="integer")
+     *     ),
+     *
+     *     @OA\Response(
+     *         response=200,
+     *         description="Liste des liens associés à l'utilisateur"
+     *     ),
+     *     @OA\Response(
+     *         response=404,
+     *         description="Aucun lien trouvé ou utilisateur inexistant"
+     *     )
+     * )
+     */
+    public function getAllByUser($id)
+    {
+        $links = LienHelper::GetAllLinkByUserId($id);
+
+        if (!$links || count($links) === 0) {
+            return response()->json(['message' => 'No links found for this user'], 404);
+        }
+
+        return response()->json($links);
+    }
+
 }

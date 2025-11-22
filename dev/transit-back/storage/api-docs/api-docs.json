@@ -12,6 +12,117 @@
         }
     ],
     "paths": {
+        "/api/documents": {
+            "get": {
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Récupérer tous les documents",
+                "operationId": "fd62dc43815f1fd386aad6744587da81",
+                "responses": {
+                    "200": {
+                        "description": "Liste de tous les documents"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Créer un nouveau document",
+                "operationId": "9b247d60e8834d470666fba8e773edb4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "Id_User",
+                                    "Nom_document",
+                                    "Chemin_stockage",
+                                    "Tailles_MB"
+                                ],
+                                "properties": {
+                                    "Id_User": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "Nom_document": {
+                                        "type": "string",
+                                        "example": "monfichier.pdf"
+                                    },
+                                    "Chemin_stockage": {
+                                        "type": "string",
+                                        "example": "/uploads/documents/abc.pdf"
+                                    },
+                                    "Tailles_MB": {
+                                        "type": "number",
+                                        "format": "float",
+                                        "example": 3.25
+                                    },
+                                    "IsActive": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Document créé avec succès"
+                    },
+                    "400": {
+                        "description": "Erreur lors de la création"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{id}/documents": {
+            "get": {
+                "tags": [
+                    "Documents"
+                ],
+                "summary": "Récupérer tous les documents appartenant à un utilisateur",
+                "operationId": "2ff7bbbf78403f582736c3f470629a57",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des documents appartenant à l'utilisateur"
+                    },
+                    "404": {
+                        "description": "Aucun document trouvé pour cet utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/documents/{id}": {
             "get": {
                 "tags": [
@@ -135,67 +246,6 @@
                 ]
             }
         },
-        "/api/documents": {
-            "post": {
-                "tags": [
-                    "Documents"
-                ],
-                "summary": "Créer un nouveau document",
-                "operationId": "9b247d60e8834d470666fba8e773edb4",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "Id_User",
-                                    "Nom_document",
-                                    "Chemin_stockage",
-                                    "Tailles_MB"
-                                ],
-                                "properties": {
-                                    "Id_User": {
-                                        "type": "integer",
-                                        "example": 1
-                                    },
-                                    "Nom_document": {
-                                        "type": "string",
-                                        "example": "monfichier.pdf"
-                                    },
-                                    "Chemin_stockage": {
-                                        "type": "string",
-                                        "example": "/uploads/documents/abc.pdf"
-                                    },
-                                    "Tailles_MB": {
-                                        "type": "number",
-                                        "format": "float",
-                                        "example": 3.25
-                                    },
-                                    "IsActive": {
-                                        "type": "boolean",
-                                        "example": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Document créé avec succès"
-                    },
-                    "400": {
-                        "description": "Erreur lors de la création"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
         "/api/documents/{id}/link": {
             "get": {
                 "tags": [
@@ -230,6 +280,23 @@
             }
         },
         "/api/links": {
+            "get": {
+                "tags": [
+                    "Liens"
+                ],
+                "summary": "Récupérer tous les liens",
+                "operationId": "faaabb479740384b02ad5fcdaa99a163",
+                "responses": {
+                    "200": {
+                        "description": "Liste de tous les liens"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
             "post": {
                 "tags": [
                     "Liens"
@@ -388,6 +455,116 @@
                 ]
             }
         },
+        "/api/users/{id}/links": {
+            "get": {
+                "tags": [
+                    "Liens"
+                ],
+                "summary": "Récupérer tous les liens d’un utilisateur",
+                "operationId": "09f8b83a1fb3d7f757082309eadac810",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des liens associés à l'utilisateur"
+                    },
+                    "404": {
+                        "description": "Aucun lien trouvé ou utilisateur inexistant"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Récupérer tous les utilisateurs",
+                "operationId": "45fc269b0725cafc1d4e444a1ace24cd",
+                "responses": {
+                    "200": {
+                        "description": "Liste complète des utilisateurs"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Créer un nouvel utilisateur",
+                "operationId": "592819a0265360b2014512d6dbfaf0e7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "Nom",
+                                    "Prenom",
+                                    "Email",
+                                    "Mot_de_passe"
+                                ],
+                                "properties": {
+                                    "Nom": {
+                                        "type": "string",
+                                        "example": "Dupont"
+                                    },
+                                    "Prenom": {
+                                        "type": "string",
+                                        "example": "Jean"
+                                    },
+                                    "Email": {
+                                        "type": "string",
+                                        "example": "jean.dupont@example.com"
+                                    },
+                                    "Mot_de_passe": {
+                                        "type": "string",
+                                        "example": "secret123"
+                                    },
+                                    "IsActive": {
+                                        "type": "boolean",
+                                        "example": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Utilisateur créé avec succès"
+                    },
+                    "400": {
+                        "description": "Erreur lors de la création"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/users/{id}": {
             "get": {
                 "tags": [
@@ -505,66 +682,6 @@
                     },
                     "400": {
                         "description": "Erreur lors de la suppression"
-                    }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
-            }
-        },
-        "/api/users": {
-            "post": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Créer un nouvel utilisateur",
-                "operationId": "592819a0265360b2014512d6dbfaf0e7",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "Nom",
-                                    "Prenom",
-                                    "Email",
-                                    "Mot_de_passe"
-                                ],
-                                "properties": {
-                                    "Nom": {
-                                        "type": "string",
-                                        "example": "Dupont"
-                                    },
-                                    "Prenom": {
-                                        "type": "string",
-                                        "example": "Jean"
-                                    },
-                                    "Email": {
-                                        "type": "string",
-                                        "example": "jean.dupont@example.com"
-                                    },
-                                    "Mot_de_passe": {
-                                        "type": "string",
-                                        "example": "secret123"
-                                    },
-                                    "IsActive": {
-                                        "type": "boolean",
-                                        "example": true
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Utilisateur créé avec succès"
-                    },
-                    "400": {
-                        "description": "Erreur lors de la création"
                     }
                 },
                 "security": [

@@ -28,4 +28,15 @@ class LienHelper
         $deleted = Lien::destroy($id);
         return $deleted ? "success" : "error";
     }
+    public static function GetAllLink()
+    {
+        return Lien::all();
+    }
+
+    public static function GetAllLinkByUserId($id)
+    {
+        return Lien::whereHas('document', function ($q) use ($id) {
+            $q->where('Id_User', $id);
+        })->get();
+    }
 }
