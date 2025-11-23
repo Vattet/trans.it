@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\LienController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
@@ -33,6 +34,9 @@ Route::delete('/api/links/{id}', [LienController::class, 'destroy']);
 Route::get('/api/public/links/{code}', [LienController::class, 'getByCode']);
 Route::post('/public/download/{code}', [LienController::class, 'downloadFile']);
 Route::get('/public/download/{code}', [LienController::class, 'downloadFileV2']);
+
+Route::get('/api/admin/stats', [AdminController::class, 'getStats']);
+
 /*
 
 ---

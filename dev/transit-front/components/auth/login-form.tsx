@@ -7,7 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 export function LoginForm() {
   const router = useRouter();
@@ -48,21 +48,26 @@ export function LoginForm() {
         return;
       }
 
-      // 1. Stocker le token proprement
-      // Note: J'ajoute SameSite=Lax pour la sécurité et compatibilité
+      // 1. Stocker le token
       document.cookie = `token=${data.token}; path=/; max-age=86400; SameSite=Lax`;
 
-      // 2. Stocker l'utilisateur (pour l'affichage du nom, etc.)
+      // 2. Stocker l'utilisateur
       localStorage.setItem("user", JSON.stringify(data.user));
 
-      window.location.href = "/dashboard";
-
+      // 3. REDIRECTION CONDITIONNELLE
+      // On vérifie si IsAdmin est vrai (1 ou true)
+      // Adapte "IsAdmin" selon la casse exacte renvoyée par ton Laravel (regarde ta console)
+      if (data.user.IsAdmin === 1 || data.user.IsAdmin === true) {
+        window.location.href = "/admin"; // Vers le dashboard Admin
+      } else {
+        window.location.href = "/dashboard"; // Vers le dashboard Utilisateur
+      }
     } catch (err) {
       console.error(err);
       setError("A server error occurred. Please try again.");
-    } finally {
       setIsLoading(false);
     }
+    // Note: on ne met pas setIsLoading(false) ici car la page va recharger
   };
 
   return (
@@ -110,7 +115,13 @@ export function LoginForm() {
       )}
 
       <Button type="submit" className="w-full" disabled={isLoading}>
-        {isLoading ? "Signing in..." : "Sign In"}
+        {isLoading ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Signing in...
+          </>
+        ) : (
+          "Sign In"
+        )}
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">

@@ -1,0 +1,4 @@
+use transit;
+
+ALTER TABLE User 
+ADD COLUMN IsAdmin BOOLEAN DEFAULT FALSE AFTER IsActive;

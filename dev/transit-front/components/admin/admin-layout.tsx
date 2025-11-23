@@ -19,10 +19,12 @@ interface AdminLayoutProps {
   admin?: any;
 }
 
+// 👇 C'est cette ligne qui manquait ou était mal nommée
 export function AdminLayout({ children, admin }: AdminLayoutProps) {
   const router = useRouter();
 
   const handleLogout = () => {
+    // Nettoyage complet
     localStorage.removeItem("user");
     document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
     router.refresh();
@@ -71,6 +73,7 @@ export function AdminLayout({ children, admin }: AdminLayoutProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
+                  {/* Affiche "Admin" si le prénom n'est pas chargé */}
                   {admin?.Prenom || "Admin"}
                 </Button>
               </DropdownMenuTrigger>

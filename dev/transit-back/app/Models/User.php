@@ -19,12 +19,14 @@ class User extends Authenticatable
         'Email',
         'Mot_de_passe',
         'IsActive',
+        'IsAdmin',
         'Date_Update',
         'Date_Creation',
     ];
 
     protected $casts = [
         'IsActive' => 'boolean',
+        'IsAdmin' => 'boolean',
         'Date_Update' => 'datetime',
         'Date_Creation' => 'datetime',
     ];

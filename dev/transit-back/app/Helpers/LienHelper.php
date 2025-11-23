@@ -30,7 +30,9 @@ class LienHelper
     }
     public static function GetAllLink()
     {
-        return Lien::all();
+        return Lien::with('document.user')
+            ->orderBy('Date_Creation', 'desc')
+            ->get();
     }
 
     public static function GetAllLinkByUserId($id)
