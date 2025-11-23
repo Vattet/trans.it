@@ -5,6 +5,10 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ParametreUserController;
+use App\Http\Controllers\ParametreDocumentController;
+use App\Http\Controllers\HistoriqueController;
+
 
 Route::get('/', function () {
     return redirect('/api/documentation');
@@ -30,6 +34,36 @@ Route::get('/api/users/{id}/links', [LienController::class, 'getAllByUser']);
 Route::put('/api/links/{id}', [LienController::class, 'update']);
 Route::delete('/api/links/{id}', [LienController::class, 'destroy']);
 
+
+
+
+// --- Parametre_User ---
+//GET    /api/user-params/{id}
+//GET    /api/users/{id}/params
+//POST   /api/user-params
+//PUT    /api/users/{id}/params
+Route::get('/api/user-params/{id}', [ParametreUserController::class, 'show']);
+Route::get('/api/users/{id}/params', [ParametreUserController::class, 'getByUser']);
+Route::post('/api/user-params', [ParametreUserController::class, 'store']);
+Route::put('/api/users/{id}/params', [ParametreUserController::class, 'update']);
+
+// --- Parametre_Document ---
+// GET    /api/documents/{id}/params
+// POST   /api/document-params
+// PUT    /api/document-params/{id}
+// DELETE /api/document-params/{id}
+Route::get('/api/documents/{id}/params', [ParametreDocumentController::class, 'getByDoc']);
+Route::post('/api/document-params', [ParametreDocumentController::class, 'store']);
+Route::put('/api/document-params/{id}', [ParametreDocumentController::class, 'update']);
+Route::delete('/api/document-params/{id}', [ParametreDocumentController::class, 'destroy']);
+
+// --- Historique ---
+// GET    /api/histories/{id}
+// GET    /api/links/{id}/histories
+// POST   /api/histories
+Route::get('/api/histories/{id}', [HistoriqueController::class, 'show']);
+Route::get('/api/links/{id}/histories', [HistoriqueController::class, 'getByLink']);
+Route::post('/api/histories', [HistoriqueController::class, 'store']);
 
 /*
 
@@ -61,31 +95,4 @@ POST   /api/links
 PUT    /api/links/{id}
 DELETE /api/links/{id}
 ```
-
-# Parametre_User
-
-```
-GET    /api/user-params/{id}
-GET    /api/users/{id}/params
-POST   /api/user-params
-PUT    /api/users/{id}/params
-```
-
-# Parametre_Document
-
-```
-GET    /api/documents/{id}/params
-POST   /api/document-params
-PUT    /api/document-params/{id}
-```
-
-# Historique
-
-```
-GET    /api/histories/{id}
-GET    /api/links/{id}/histories
-POST   /api/histories
-```
-
----
 */
