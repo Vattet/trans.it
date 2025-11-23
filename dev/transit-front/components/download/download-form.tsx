@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,62 +18,57 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleDownload = async (e: React.FormEvent) => {
+  // compteur dynamique
+  const [downloadCount, setDownloadCount] = useState<number>(
+    transfer.lien?.Nb_Acces ?? transfer.downloadCount ?? 0
+  );
+
+  // --- FETCH LIVE STATS ---
+  const refreshStats = async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/public/links/${transfer.code}`,
+        {
+          headers: { Accept: "application/json" },
+        }
+      );
+
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      if (data?.link?.Nb_Acces !== undefined) {
+        setDownloadCount(data.link.Nb_Acces);
+      }
+    } catch (err) {
+      console.error("Erreur refresh stats :", err);
+    }
+  };
+
+  // --- REFRESH AU MOUNT (FIABILITÉ) ---
+  useEffect(() => {
+    refreshStats();
+  }, []);
+
+  const handleDownload = (e: React.FormEvent) => {
     e.preventDefault();
     setIsDownloading(true);
     setError("");
 
-    try {
-      // 1. CONSTRUCTION DE L'URL (GET)
-      // Attention : Assure-toi que c'est bien "/api/public" si ta route est dans api.php
-      const baseUrl = `http://localhost:8000/public/download/${transfer.code}`;
-      const url = new URL(baseUrl);
+    const url = new URL(
+      `http://localhost:8000/public/download/${transfer.code}`
+    );
 
-      // Si un mot de passe est saisi, on l'ajoute dans l'URL (?password=xyz)
-      if (password) {
-        url.searchParams.append("password", password);
-      }
+    if (password) url.searchParams.append("password", password);
 
-      // 2. APPEL À L'API (GET)
-      const response = await fetch(url.toString(), {
-        method: "GET", // <--- CHANGEMENT ICI
-        // Pas de body ni de headers spécifiques nécessaires pour un GET simple
-      });
+    // OUVERTURE DU FICHIER
+    window.open(url.toString(), "_blank");
 
-      if (response.status === 403) {
-        throw new Error("Lien expiré ou mot de passe incorrect");
-      }
-      if (response.status === 404) {
-        throw new Error("Fichier introuvable sur le serveur");
-      }
-      if (!response.ok) {
-        throw new Error("Erreur lors du téléchargement");
-      }
-
-      // 3. RÉCUPÉRATION DU FICHIER (BLOB)
-      const blob = await response.blob();
-
-      // 4. DÉCLENCHEMENT DU TÉLÉCHARGEMENT NAVIGATEUR
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-
-      const fileName = transfer.files[0]?.name || "downloaded-file";
-      a.download = fileName;
-
-      document.body.appendChild(a);
-      a.click();
-
-      // Nettoyage
-      window.URL.revokeObjectURL(downloadUrl);
-      document.body.removeChild(a);
-
-    } catch (err: any) {
-      console.error(err);
-      setError(err.message || "Une erreur est survenue");
-    } finally {
+    // Petit délai pour laisser le backend mettre à jour Nb_Acces
+    setTimeout(async () => {
+      await refreshStats(); // Mise à jour garantie
       setIsDownloading(false);
-    }
+    }, 1500);
   };
 
   const totalSizeMB = (transfer.files[0].size / (1024 * 1024)).toFixed(2);
@@ -81,6 +76,7 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
   return (
     <form onSubmit={handleDownload} className="max-w-2xl mx-auto">
       <div className="bg-card border border-border rounded-lg p-8 space-y-6">
+        {/* HEADER */}
         <div>
           <h1 className="text-3xl font-bold mb-2">Ready to Download</h1>
           <p className="text-muted-foreground">
@@ -91,6 +87,7 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
           </p>
         </div>
 
+        {/* ERROR */}
         {error && (
           <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md flex items-center gap-2 text-destructive text-sm">
             <AlertCircle className="w-4 h-4" />
@@ -98,6 +95,7 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
           </div>
         )}
 
+        {/* FILE DETAILS */}
         <div className="space-y-2">
           <Label>Files ({transfer.files.length})</Label>
           <div className="bg-muted/30 border border-border rounded-lg p-4 flex items-center gap-4">
@@ -111,10 +109,11 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
           </div>
         </div>
 
+        {/* STATS */}
         <div className="grid grid-cols-2 gap-4 p-4 bg-background border border-border rounded-lg text-sm">
           <div>
             <p className="text-muted-foreground">Downloads</p>
-            <p className="font-semibold">{transfer.downloadCount || 0} times</p>
+            <p className="font-semibold">{downloadCount} times</p>
           </div>
           <div>
             <p className="text-muted-foreground">Expires on</p>
@@ -124,6 +123,7 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
           </div>
         </div>
 
+        {/* PASSWORD */}
         {transfer.password && (
           <div className="space-y-2">
             <Label htmlFor="password" className="flex items-center gap-2">
@@ -149,6 +149,7 @@ export function DownloadForm({ transfer, transferId }: DownloadFormProps) {
           </div>
         )}
 
+        {/* DOWNLOAD BUTTON */}
         <Button
           type="submit"
           className="w-full gap-2"

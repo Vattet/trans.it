@@ -40,7 +40,7 @@ interface Transfer {
     Code_unique: string;
     Nb_Acces: number;
     Date_Expiration: string;
-  };
+  } | null;
 }
 
 export function TransfersList() {
@@ -56,6 +56,7 @@ export function TransfersList() {
     return match ? match[2] : null;
   };
 
+  // --- FETCH OPTIMISÉ AVEC NORMALISATION ---
   const fetchTransfers = async () => {
     const userStr = localStorage.getItem("user");
     if (!userStr) return;
@@ -74,12 +75,27 @@ export function TransfersList() {
         }
       );
 
-      if (res.ok) {
-        const data = await res.json();
-        setTransfers(data);
+      if (!res.ok) {
+        console.error("Erreur API:", res.status);
+        return;
       }
+
+      const data = await res.json();
+
+      console.log("TRANSFERS RAW BACKEND :", data);
+
+      // 🔥 Normalisation pour éviter tous les "No link" incorrects
+      const normalized = data.map((doc: Transfer) => ({
+        ...doc,
+        lien:
+          doc.lien && typeof doc.lien === "object" && doc.lien.Code_unique
+            ? doc.lien
+            : null,
+      }));
+
+      setTransfers(normalized);
     } catch (error) {
-      console.error(error);
+      console.error("Erreur fetch:", error);
     } finally {
       setIsLoading(false);
     }
@@ -96,11 +112,9 @@ export function TransfersList() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // --- FONCTION DE TÉLÉCHARGEMENT SIMPLE ---
   const downloadFile = (code: string) => {
-    // On ouvre l'URL de l'API qui force le téléchargement (StreamedResponse)
-    // Le navigateur gérera le reste (téléchargement en arrière-plan)
-    window.open(`http://localhost:8000/api/public/download/${code}`, "_blank");
+    const url = `http://localhost:8000/public/download/${code}`;
+    window.open(url, "_blank");
   };
 
   const confirmDelete = async () => {
@@ -134,6 +148,7 @@ export function TransfersList() {
     }
   };
 
+  // --- LOADING ---
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-lg p-6 flex justify-center py-12">
@@ -152,6 +167,7 @@ export function TransfersList() {
           </p>
         </div>
 
+        {/* --- NO FILES --- */}
         {transfers.length === 0 ? (
           <div className="text-center py-12 px-4">
             <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -163,6 +179,7 @@ export function TransfersList() {
             </p>
           </div>
         ) : (
+          // --- TABLE ---
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -176,74 +193,87 @@ export function TransfersList() {
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {transfers.map((transfer) => (
                   <TableRow key={transfer.ID}>
+                    {/* NAME */}
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <FileText className="w-4 h-4 text-primary" />
                         <span
-                          className="truncate max-w-[150px] md:max-w-[200px]"
+                          className="truncate max-w-[150px] md:max-w-[220px]"
                           title={transfer.Nom_document}
                         >
                           {transfer.Nom_document}
                         </span>
                       </div>
                     </TableCell>
+
+                    {/* SIZE */}
                     <TableCell>
                       {parseFloat(transfer.Tailles_MB.toString()).toFixed(2)} MB
                     </TableCell>
+
+                    {/* DATE */}
                     <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                       {new Date(transfer.Date_Creation).toLocaleDateString()}
                     </TableCell>
+
+                    {/* DOWNLOAD COUNT */}
                     <TableCell className="hidden md:table-cell">
                       <div className="flex items-center gap-1">
                         <Download className="w-3 h-3 text-muted-foreground" />
-                        {transfer.lien?.Nb_Acces || 0}
+                        {transfer.lien?.Nb_Acces ?? 0}
                       </div>
                     </TableCell>
+
+                    {/* ACTIONS */}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Bouton Télécharger */}
                         {transfer.lien ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              downloadFile(transfer.lien!.Code_unique)
-                            }
-                            title="Download"
-                          >
-                            <Download className="w-4 h-4" />
-                          </Button>
+                          <>
+                            {/* DOWNLOAD */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                downloadFile(transfer.lien!.Code_unique)
+                              }
+                              title="Download"
+                            >
+                              <Download className="w-4 h-4" />
+                            </Button>
+
+                            {/* COPY LINK */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                copyLink(
+                                  transfer.lien!.Code_unique,
+                                  transfer.ID
+                                )
+                              }
+                              className={
+                                copiedId === transfer.ID ? "text-green-500" : ""
+                              }
+                              title="Copy Link"
+                            >
+                              {copiedId === transfer.ID ? (
+                                <Check className="w-4 h-4" />
+                              ) : (
+                                <LinkIcon className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </>
                         ) : (
                           <span className="text-xs text-muted-foreground px-2">
                             No link
                           </span>
                         )}
 
-                        {/* Bouton Copier Lien */}
-                        {transfer.lien && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              copyLink(transfer.lien!.Code_unique, transfer.ID)
-                            }
-                            className={
-                              copiedId === transfer.ID ? "text-green-500" : ""
-                            }
-                            title="Copy Link"
-                          >
-                            {copiedId === transfer.ID ? (
-                              <Check className="w-4 h-4" />
-                            ) : (
-                              <LinkIcon className="w-4 h-4" />
-                            )}
-                          </Button>
-                        )}
-
-                        {/* Bouton Supprimer */}
+                        {/* DELETE */}
                         <Button
                           variant="ghost"
                           size="sm"
@@ -268,6 +298,7 @@ export function TransfersList() {
         )}
       </div>
 
+      {/* --- DELETE MODAL --- */}
       <AlertDialog
         open={!!fileToDelete}
         onOpenChange={(open) => !open && setFileToDelete(null)}
@@ -283,6 +314,7 @@ export function TransfersList() {
               file and the sharing link will stop working immediately.
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction

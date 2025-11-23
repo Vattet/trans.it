@@ -11,11 +11,13 @@ class DocumentHelper
         return Document::all();
     }
 
-    public static function GetAllDocumentByUserId($idUser)
+    public static function GetAllDocumentByUserId($id)
     {
-        return Document::where('Id_User', $idUser)->get();
+        return Document::where('Id_User', $id)
+            ->with('lien')
+            ->orderBy('Date_Creation', 'desc')
+            ->get();
     }
-
     public static function InsertDoc(array $data)
     {
         $document = Document::create($data);
