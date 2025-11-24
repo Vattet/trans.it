@@ -320,7 +320,6 @@ export function UsersManagement() {
                         className="gap-1"
                       >
                         <Edit className="w-3 h-3" />
-                        Edit
                       </Button>
                       <Button
                         size="sm"

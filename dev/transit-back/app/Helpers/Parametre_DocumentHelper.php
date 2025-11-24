@@ -8,13 +8,14 @@ use Carbon\Carbon;
 class Parametre_DocumentHelper
 {
     /** CREATE */
-    public static function InsertParamDoc($param)
+    public static function InsertParamDoc($data)
     {
         try {
             return ParametreDocument::create([
-                'Protection_MotDePasse' => $param['Protection_MotDePasse'],
-                'Mot_de_passe' => $param['Mot_de_passe'],
-                'Date_Expiration' => $param['Date_Expiration'],
+                'Id_Document' => $data['Id_Document'], // ⚠️ INDISPENSABLE
+                'Protection_MotDePasse' => $data['Protection_MotDePasse'] ?? false,
+                'Mot_de_passe' => $data['Mot_de_passe'] ?? null,
+                'Date_Expiration' => isset($data['Date_Expiration']) ? Carbon::parse($data['Date_Expiration']) : null,
                 'Date_Update' => Carbon::now(),
                 'Date_Creation' => Carbon::now(),
             ]);
@@ -24,9 +25,9 @@ class Parametre_DocumentHelper
     }
 
     /** READ */
-    public static function GetParameterByDocId(int $id)
+    public static function GetParameterByDocId(int $idDocument)
     {
-        return ParametreDocument::find($id);
+        return ParametreDocument::where('Id_Document', $idDocument)->first();
     }
     public static function GetParamByUserId(int $userId)
     {

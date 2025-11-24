@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Helpers\Parametre_DocumentHelper;
+use Illuminate\Support\Facades\Hash;
 
 class ParametreDocumentController extends Controller
 {
@@ -31,12 +32,21 @@ class ParametreDocumentController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'Protection_MotDePasse' => 'required|boolean',
+            'Protection_MotDePasse' => 'nullable|boolean',
             'Mot_de_passe' => 'nullable|string',
             'Date_Expiration' => 'nullable|date',
         ]);
+        $data = $request->all();
 
-        $param = Parametre_DocumentHelper::InsertParamDoc($request->all());
+        if (!empty($data['Mot_de_passe'])) {
+            $data['Mot_de_passe'] = Hash::make($data['Mot_de_passe']);
+            $data['Protection_MotDePasse'] = true;
+        } else {
+            $data['Mot_de_passe'] = null;
+            $data['Protection_MotDePasse'] = false;
+        }
+
+        $param = Parametre_DocumentHelper::InsertParamDoc($data);
 
         if (!$param) {
             return response()->json(['error' => 'Erreur création paramètre'], 500);

@@ -44,7 +44,7 @@ class LienHelper
     public static function GetLinkByUniqueCode($code)
     {
         return Lien::where('Code_unique', $code)
-            ->with('document.user')
+            ->with(['document.user', 'document.parametre'])
             ->first();
     }
 

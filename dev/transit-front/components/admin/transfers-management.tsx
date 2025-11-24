@@ -4,7 +4,21 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Search, Loader2, FileText, AlertTriangle } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import {
+  Trash2,
+  Search,
+  Loader2,
+  FileText,
+  Download,
+  ExternalLink,
+  AlertTriangle,
+  Edit,
+  Save,
+  Lock,
+  Calendar,
+} from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,14 +29,22 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-// Interface correspondant à la réponse JSON de ton API Laravel
+// Interface mise à jour avec les paramètres
 interface AdminTransfer {
   ID: number;
   Code_unique: string;
   Nb_Acces: number;
   IsActive: boolean;
-  Date_Expiration: string;
+  Date_Expiration: string; // Date expiration du LIEN (souvent liée aux params)
   Date_Creation: string;
   document?: {
     ID: number;
@@ -32,6 +54,11 @@ interface AdminTransfer {
       Email: string;
       Nom: string;
       Prenom: string;
+    };
+    // Les paramètres de sécurité du document
+    parametre?: {
+      Protection_MotDePasse: boolean;
+      Date_Expiration: string;
     };
   };
 }
@@ -43,10 +70,24 @@ export function TransfersManagement() {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
-  // État pour la modale de suppression
+  // --- ÉTATS POUR LA SUPPRESSION ---
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [fileToDelete, setFileToDelete] = useState<number | null>(null);
+
+  // --- ÉTATS POUR L'ÉDITION ---
+  const [editingTransfer, setEditingTransfer] = useState<AdminTransfer | null>(
+    null
+  );
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Formulaire d'édition
+  const [editForm, setEditForm] = useState({
+    Nom_document: "",
+    Protection_MotDePasse: false,
+    Mot_de_passe: "", // Vide par défaut (on ne change que si rempli)
+    Date_Expiration: "",
+  });
 
   const getToken = () => {
     if (typeof document === "undefined") return null;
@@ -55,31 +96,31 @@ export function TransfersManagement() {
   };
 
   // 1. Charger tous les transferts
-  useEffect(() => {
-    const fetchAllTransfers = async () => {
-      const token = getToken();
-      if (!token) return;
+  const fetchAllTransfers = async () => {
+    const token = getToken();
+    if (!token) return;
 
-      try {
-        const res = await fetch("http://localhost:8000/api/links", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/json",
-          },
-        });
+    try {
+      const res = await fetch("http://localhost:8000/api/links", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
+        },
+      });
 
-        if (res.ok) {
-          const data = await res.json();
-          setTransfers(data);
-          setFilteredTransfers(data);
-        }
-      } catch (error) {
-        console.error("Erreur chargement admin transfers", error);
-      } finally {
-        setIsLoading(false);
+      if (res.ok) {
+        const data = await res.json();
+        setTransfers(data);
+        setFilteredTransfers(data);
       }
-    };
+    } catch (error) {
+      console.error("Erreur chargement admin transfers", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchAllTransfers();
   }, []);
 
@@ -90,7 +131,6 @@ export function TransfersManagement() {
       const filename = t.document?.Nom_document.toLowerCase() || "";
       const email = t.document?.user?.Email.toLowerCase() || "anonyme";
       const code = t.Code_unique.toLowerCase();
-
       return (
         filename.includes(lowerTerm) ||
         email.includes(lowerTerm) ||
@@ -100,13 +140,112 @@ export function TransfersManagement() {
     setFilteredTransfers(filtered);
   }, [searchTerm, transfers]);
 
-  // 3. Supprimer un transfert (Appelé par la modale)
+  // --- ACTIONS SIMPLES ---
+  const downloadFile = (code: string) => {
+    window.open(`http://localhost:8000/public/download/${code}`, "_blank");
+  };
+
+  const visitPublicPage = (code: string) => {
+    window.open(`${window.location.origin}/download/${code}`, "_blank");
+  };
+
+  // --- LOGIQUE D'ÉDITION ---
+
+  const handleEditClick = (transfer: AdminTransfer) => {
+    if (!transfer.document) return;
+
+    // Formatage de la date pour l'input type="date" (YYYY-MM-DD)
+    let formattedDate = "";
+    // On regarde dans les paramètres du doc en priorité, sinon dans le lien
+    const rawDate =
+      transfer.document.parametre?.Date_Expiration || transfer.Date_Expiration;
+    if (rawDate) {
+      formattedDate = new Date(rawDate).toISOString().split("T")[0];
+    }
+
+    setEditingTransfer(transfer);
+    setEditForm({
+      Nom_document: transfer.document.Nom_document,
+      Protection_MotDePasse: Boolean(
+        transfer.document.parametre?.Protection_MotDePasse
+      ),
+      Mot_de_passe: "", // On ne peut pas récupérer le mot de passe haché, on le laisse vide
+      Date_Expiration: formattedDate,
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingTransfer || !editingTransfer.document) return;
+    setIsSaving(true);
+    const token = getToken();
+
+    try {
+      // 1. Mise à jour du Document (Nom)
+      // Route: PUT /api/documents/{id}
+      await fetch(
+        `http://localhost:8000/api/documents/${editingTransfer.document.ID}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            Nom_document: editForm.Nom_document,
+          }),
+        }
+      );
+
+      // 2. Mise à jour des Paramètres (Mdp, Expiration)
+      // Route: PUT /api/document-params/{idDoc}
+      // Note: Le contrôleur ParametreDocumentController attend 'Id_Document' dans l'URL pour l'update
+      const paramsPayload: any = {
+        Protection_MotDePasse: editForm.Protection_MotDePasse,
+        Date_Expiration: editForm.Date_Expiration,
+      };
+
+      // On n'envoie le mot de passe que s'il a été modifié (non vide)
+      if (
+        editForm.Protection_MotDePasse &&
+        editForm.Mot_de_passe.trim() !== ""
+      ) {
+        paramsPayload.Mot_de_passe = editForm.Mot_de_passe;
+      }
+
+      await fetch(
+        `http://localhost:8000/api/document-params/${editingTransfer.document.ID}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          body: JSON.stringify(paramsPayload),
+        }
+      );
+
+      // 3. Rafraîchir la liste locale
+      // On recharge tout pour avoir les données fraîches
+      await fetchAllTransfers();
+
+      setEditingTransfer(null); // Fermer modale
+    } catch (error) {
+      console.error(error);
+      alert("Erreur lors de la modification.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // --- LOGIQUE DE SUPPRESSION ---
   const confirmDelete = async () => {
     if (!fileToDelete) return;
 
     const docId = fileToDelete;
-    setFileToDelete(null); // Fermer la modale
-    setIsDeleting(docId); // Activer le loader
+    setFileToDelete(null);
+    setIsDeleting(docId);
 
     const token = getToken();
 
@@ -172,19 +311,14 @@ export function TransfersManagement() {
                   <th className="text-left p-3 font-semibold">Code</th>
                   <th className="text-left p-3 font-semibold">File</th>
                   <th className="text-left p-3 font-semibold">Created By</th>
-                  <th className="text-left p-3 font-semibold">Downloads</th>
-                  <th className="text-left p-3 font-semibold">Created</th>
-                  <th className="text-left p-3 font-semibold">Status</th>
+                  <th className="text-left p-3 font-semibold">Stats</th>
+                  <th className="text-left p-3 font-semibold">Date</th>
                   <th className="text-left p-3 font-semibold">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredTransfers.length > 0 ? (
                   filteredTransfers.map((transfer) => {
-                    const isExpired =
-                      new Date(transfer.Date_Expiration) < new Date();
-                    const isActive = transfer.IsActive && !isExpired;
-
                     if (!transfer.document) return null;
 
                     return (
@@ -223,12 +357,16 @@ export function TransfersManagement() {
                             </div>
                           ) : (
                             <span className="italic text-muted-foreground">
-                              Anonyme (Guest)
+                              Anonyme
                             </span>
                           )}
                         </td>
 
-                        <td className="p-3">{transfer.Nb_Acces}</td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1 text-sm">
+                            <Download className="w-3 h-3" /> {transfer.Nb_Acces}
+                          </div>
+                        </td>
 
                         <td className="p-3 text-sm text-muted-foreground">
                           {new Date(
@@ -237,36 +375,57 @@ export function TransfersManagement() {
                         </td>
 
                         <td className="p-3">
-                          <span
-                            className={`text-xs px-2 py-1 rounded-full font-medium ${
-                              isActive
-                                ? "bg-green-500/10 text-green-600 border border-green-200"
-                                : "bg-destructive/10 text-destructive border border-destructive/20"
-                            }`}
-                          >
-                            {isActive
-                              ? "Active"
-                              : isExpired
-                              ? "Expired"
-                              : "Disabled"}
-                          </span>
-                        </td>
+                          <div className="flex items-center gap-1">
+                            {/* BOUTON EDIT */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Edit Transfer"
+                              onClick={() => handleEditClick(transfer)}
+                            >
+                              <Edit className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                            </Button>
 
-                        <td className="p-3">
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() =>
-                              setFileToDelete(transfer.document!.ID)
-                            }
-                            disabled={isDeleting === transfer.document!.ID}
-                          >
-                            {isDeleting === transfer.document!.ID ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-3 h-3" />
-                            )}
-                          </Button>
+                            {/* DOWNLOAD */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Download"
+                              onClick={() => downloadFile(transfer.Code_unique)}
+                            >
+                              <Download className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+
+                            {/* VISIT */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Visit"
+                              onClick={() =>
+                                visitPublicPage(transfer.Code_unique)
+                              }
+                            >
+                              <ExternalLink className="w-4 h-4 text-muted-foreground hover:text-primary" />
+                            </Button>
+
+                            {/* DELETE */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Delete"
+                              onClick={() =>
+                                setFileToDelete(transfer.document!.ID)
+                              }
+                              disabled={isDeleting === transfer.document!.ID}
+                              className="hover:bg-destructive/10"
+                            >
+                              {isDeleting === transfer.document!.ID ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-destructive" />
+                              ) : (
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              )}
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -292,7 +451,100 @@ export function TransfersManagement() {
         </Card>
       </div>
 
-      {/* --- MODALE DE CONFIRMATION (IDENTIQUE AUX AUTRES) --- */}
+      {/* --- MODAL D'ÉDITION --- */}
+      <Dialog
+        open={!!editingTransfer}
+        onOpenChange={(open) => !open && setEditingTransfer(null)}
+      >
+        <DialogContent className="sm:max-w-[450px]">
+          <DialogHeader>
+            <DialogTitle>Edit Transfer</DialogTitle>
+            <DialogDescription>
+              Update file details and security settings.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            {/* Nom du fichier */}
+            <div className="space-y-2">
+              <Label htmlFor="name">File Name</Label>
+              <Input
+                id="name"
+                value={editForm.Nom_document}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, Nom_document: e.target.value })
+                }
+              />
+            </div>
+
+            {/* Date d'expiration */}
+            <div className="space-y-2">
+              <Label htmlFor="date" className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" /> Expiration Date
+              </Label>
+              <Input
+                id="date"
+                type="date"
+                value={editForm.Date_Expiration}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, Date_Expiration: e.target.value })
+                }
+              />
+            </div>
+
+            {/* Sécurité Mot de passe */}
+            <div className="space-y-4 border rounded-lg p-4 mt-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="protect" className="flex items-center gap-2">
+                  <Lock className="w-4 h-4" /> Password Protection
+                </Label>
+                <Switch
+                  id="protect"
+                  checked={editForm.Protection_MotDePasse}
+                  onCheckedChange={(val) =>
+                    setEditForm({ ...editForm, Protection_MotDePasse: val })
+                  }
+                />
+              </div>
+
+              {editForm.Protection_MotDePasse && (
+                <div className="space-y-2 animate-in slide-in-from-top-2 fade-in">
+                  <Label htmlFor="pwd">New Password</Label>
+                  <Input
+                    id="pwd"
+                    type="text" // Visible pour l'admin
+                    placeholder="Leave empty to keep current"
+                    value={editForm.Mot_de_passe}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, Mot_de_passe: e.target.value })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Warning: Entering a value here will overwrite the existing
+                    password.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingTransfer(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- MODAL DE SUPPRESSION --- */}
       <AlertDialog
         open={!!fileToDelete}
         onOpenChange={(open) => !open && setFileToDelete(null)}

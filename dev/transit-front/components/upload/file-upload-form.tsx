@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch"; // N'oublie pas d'importer le Switch
 import Link from "next/link";
 import { getFilesToTransfer } from "@/lib/file-store";
 
@@ -34,9 +35,9 @@ export function FileUploadForm({ user }: { user?: any }) {
   const [files, setFiles] = useState<File[]>([]);
 
   // Options
+  const [enablePassword, setEnablePassword] = useState(false); // Nouvel état pour le switch
   const [transferPassword, setTransferPassword] = useState("");
   const [expirationDays, setExpirationDays] = useState("7");
-  const [maxDownloads, setMaxDownloads] = useState("unlimited");
 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadComplete, setUploadComplete] = useState(false);
@@ -48,7 +49,6 @@ export function FileUploadForm({ user }: { user?: any }) {
   useEffect(() => {
     const incomingFiles = getFilesToTransfer();
     if (incomingFiles && incomingFiles.length > 0) {
-      // On ne garde que le premier fichier si plusieurs arrivent
       setFiles([incomingFiles[0]]);
     }
   }, []);
@@ -69,7 +69,6 @@ export function FileUploadForm({ user }: { user?: any }) {
     e.preventDefault();
     setIsDragging(false);
     setError("");
-    // On ne prend que le premier fichier droppé
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
       validateAndAddFile(droppedFiles[0]);
@@ -83,19 +82,17 @@ export function FileUploadForm({ user }: { user?: any }) {
     }
   };
 
-  // Modification pour ne gérer qu'un seul fichier
   const validateAndAddFile = (file: File) => {
     if (file.size > MAX_FILE_SIZE) {
       setError("File size exceeds 2GB limit");
       return;
     }
-    // REMPLACEMENT : On écrase le tableau avec le nouveau fichier unique
     setFiles([file]);
   };
 
   const removeFile = () => {
-    setFiles([]); // On vide tout simplement la liste
-    setError(""); // On nettoie les erreurs potentielles
+    setFiles([]);
+    setError("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -104,6 +101,12 @@ export function FileUploadForm({ user }: { user?: any }) {
 
     if (files.length === 0) {
       setError("Please select a file");
+      return;
+    }
+
+    // Validation mot de passe si activé
+    if (enablePassword && transferPassword.length < 4) {
+      setError("Password must be at least 4 characters long");
       return;
     }
 
@@ -137,53 +140,72 @@ export function FileUploadForm({ user }: { user?: any }) {
       const daysToAdd = currentUser ? parseInt(expirationDays) : 7;
       expirationDate.setDate(expirationDate.getDate() + daysToAdd);
 
-      // On traite uniquement le fichier unique (files[0])
-      const file = files[0];
+      const uploadPromises = files.map(async (file) => {
+        const formData = new FormData();
+        formData.append("document", file);
+        formData.append("Nom_document", file.name);
+        formData.append("Tailles_MB", (file.size / (1024 * 1024)).toFixed(4));
+        formData.append("IsActive", "1");
 
-      const formData = new FormData();
-      formData.append("document", file);
-      formData.append("Nom_document", file.name);
-      formData.append("Tailles_MB", (file.size / (1024 * 1024)).toFixed(4));
-      formData.append("IsActive", "1");
+        if (currentUser && currentUser.ID) {
+          formData.append("Id_User", currentUser.ID);
+        } else {
+          formData.append("Id_User", ANONYMOUS_USER_ID);
+        }
 
-      if (currentUser && currentUser.ID) {
-        formData.append("Id_User", currentUser.ID);
-      } else {
-        formData.append("Id_User", ANONYMOUS_USER_ID);
-      }
+        const resDoc = await fetch("http://localhost:8000/api/documents", {
+          method: "POST",
+          headers: headers,
+          body: formData,
+        });
 
-      const resDoc = await fetch("http://localhost:8000/api/documents", {
-        method: "POST",
-        headers: headers,
-        body: formData,
+        if (!resDoc.ok) {
+          const errData = await resDoc.json().catch(() => ({}));
+          throw new Error(errData.message || `Failed to upload ${file.name}`);
+        }
+        const docData = await resDoc.json();
+        const docId = docData.document_id || docData.id;
+
+        if (docId) {
+          const linkBody = {
+            Id_Doc: docId,
+            Code_unique: uniqueCode,
+            URL: generatedUrl,
+            Nb_Acces: 0,
+            isActive: true,
+            Date_Expiration: expirationDate.toISOString(),
+          };
+
+          await fetch("http://localhost:8000/api/links", {
+            method: "POST",
+            headers: {
+              ...headers,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(linkBody),
+          });
+
+          // --- Paramètres de sécurité (Mot de passe) ---
+          const paramsBody = {
+            Id_Document: docId,
+            Protection_MotDePasse: enablePassword, // true/false selon le switch
+            Mot_de_passe: enablePassword ? transferPassword : null, // Envoi du MDP si activé
+            Date_Expiration: expirationDate.toISOString(),
+          };
+
+          await fetch("http://localhost:8000/api/document-params", {
+            method: "POST",
+            headers: {
+              ...headers,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(paramsBody),
+          });
+        }
+        return docData;
       });
 
-      if (!resDoc.ok) {
-        const errData = await resDoc.json().catch(() => ({}));
-        throw new Error(errData.message || `Failed to upload ${file.name}`);
-      }
-      const docData = await resDoc.json();
-      const docId = docData.document_id || docData.id;
-
-      if (docId) {
-        const linkBody = {
-          Id_Doc: docId,
-          Code_unique: uniqueCode,
-          URL: generatedUrl,
-          Nb_Acces: 0,
-          isActive: true,
-          Date_Expiration: expirationDate.toISOString(),
-        };
-
-        await fetch("http://localhost:8000/api/links", {
-          method: "POST",
-          headers: {
-            ...headers,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(linkBody),
-        });
-      }
+      await Promise.all(uploadPromises);
 
       setTransferLink(generatedUrl);
       setUploadComplete(true);
@@ -204,6 +226,7 @@ export function FileUploadForm({ user }: { user?: any }) {
   if (uploadComplete) {
     return (
       <div className="max-w-2xl mx-auto">
+        {/* ... (Code de succès inchangé) ... */}
         <div className="bg-card border border-border rounded-lg p-8 text-center space-y-6">
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
             <Check className="w-8 h-8 text-primary" />
@@ -272,7 +295,7 @@ export function FileUploadForm({ user }: { user?: any }) {
         </p>
       </div>
 
-      {/* --- UPLOAD ZONE (Cachée si un fichier est déjà présent) --- */}
+      {/* --- UPLOAD ZONE --- */}
       {files.length === 0 && (
         <div
           className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
@@ -284,7 +307,6 @@ export function FileUploadForm({ user }: { user?: any }) {
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
-          {/* Retrait de 'multiple' */}
           <input
             ref={fileInputRef}
             type="file"
@@ -313,7 +335,7 @@ export function FileUploadForm({ user }: { user?: any }) {
         </div>
       )}
 
-      {/* --- FILE DISPLAY (Affiché uniquement si un fichier est sélectionné) --- */}
+      {/* --- FILE DISPLAY --- */}
       {files.length > 0 && (
         <div className="space-y-2">
           <Label>Selected File</Label>
@@ -337,21 +359,40 @@ export function FileUploadForm({ user }: { user?: any }) {
         </div>
       )}
 
-      {/* --- OPTIONS --- */}
+      {/* --- OPTIONS (Affichées si user connecté) --- */}
       {user ? (
         <div className="space-y-4 p-4 bg-card border border-border rounded-lg">
           <h3 className="font-semibold">Transfer Options</h3>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password Protection (Optional)</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter password"
-              value={transferPassword}
-              onChange={(e) => setTransferPassword(e.target.value)}
+          {/* SWITCH MOT DE PASSE */}
+          <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/20">
+            <div className="space-y-0.5">
+              <Label className="text-base flex items-center gap-2">
+                <Lock className="w-4 h-4" /> Protect with Password
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Require a password to download
+              </p>
+            </div>
+            <Switch
+              checked={enablePassword}
+              onCheckedChange={setEnablePassword}
             />
           </div>
+
+          {/* CHAMP MOT DE PASSE (Affiché uniquement si switch activé) */}
+          {enablePassword && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+              <Label htmlFor="password">Enter Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Choose a secure password"
+                value={transferPassword}
+                onChange={(e) => setTransferPassword(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="expiration">Expires In</Label>
@@ -367,21 +408,6 @@ export function FileUploadForm({ user }: { user?: any }) {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="downloads">Max Downloads</Label>
-            <Select value={maxDownloads} onValueChange={setMaxDownloads}>
-              <SelectTrigger id="downloads">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="1">1 Download</SelectItem>
-                <SelectItem value="5">5 Downloads</SelectItem>
-                <SelectItem value="10">10 Downloads</SelectItem>
-                <SelectItem value="unlimited">Unlimited</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       ) : (
         <div className="p-4 bg-secondary/50 border border-border rounded-lg flex items-center justify-between">
@@ -392,8 +418,7 @@ export function FileUploadForm({ user }: { user?: any }) {
             <div>
               <p className="text-sm font-medium">Want more options?</p>
               <p className="text-xs text-muted-foreground">
-                Sign in to protect your files with a password and set custom
-                expiration.
+                Sign in to protect your files with a password.
               </p>
             </div>
           </div>

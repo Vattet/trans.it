@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Helpers\LienHelper;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 
 class LienController extends Controller
@@ -298,30 +299,61 @@ class LienController extends Controller
     }
     public function downloadFileV2(Request $request, $code)
     {
-        // ... tes vérifications 1, 2, 3 ... (Helper, Compteur, etc)
-        $lien = LienHelper::FindActiveDownloadLink($code);
-        if (!$lien || !$lien->document)
-            return response()->json(['message' => 'Fichier introuvable'], 404);
+        // 1. On utilise le Helper (qui charge maintenant document.parametre)
+        $lien = LienHelper::GetLinkByUniqueCode($code);
 
+        // Vérification basique du lien
+        if (!$lien || !$lien->document) {
+            return response()->json(['message' => 'Fichier introuvable'], 404);
+        }
+
+        // Vérification si le lien a été désactivé manuellement
+        if (!$lien->IsActive) {
+            return response()->json(['message' => 'Ce lien a été désactivé'], 403);
+        }
+
+        // --- SÉCURITÉ VIA LES PARAMÈTRES DU DOCUMENT ---
+        // (Le reste du code reste identique car $lien contient les mêmes données qu'avant)
+        $params = $lien->document->parametre;
+
+        if ($params) {
+            // A. VÉRIFICATION DATE D'EXPIRATION
+            if ($params->Date_Expiration && now()->gt($params->Date_Expiration)) {
+                return response()->json(['message' => 'Ce transfert a expiré.'], 403);
+            }
+
+            // B. VÉRIFICATION MOT DE PASSE
+            if ($params->Protection_MotDePasse) {
+                $inputPassword = $request->input('password');
+
+                if (!$inputPassword) {
+                    return response()->json(['message' => 'Mot de passe requis.'], 401);
+                }
+
+                if (!Hash::check($inputPassword, $params->Mot_de_passe)) {
+                    return response()->json(['message' => 'Mot de passe incorrect.'], 403);
+                }
+            }
+        }
+
+        // 3. Mise à jour du compteur
         $lien->increment('Nb_Acces');
 
+        // 4. Téléchargement
         $relativePath = $lien->document->Chemin_stockage;
 
         if (!Storage::disk('public')->exists($relativePath)) {
             return response()->json(['message' => 'Fichier physique manquant'], 404);
         }
 
-        // On utilise le chemin absolu
         $absolutePath = Storage::disk('public')->path($relativePath);
 
-        // Correction CORS explicite au cas où le middleware échoue
         $headers = [
             'Access-Control-Allow-Origin' => 'http://localhost:3000',
             'Access-Control-Allow-Methods' => 'POST, GET, OPTIONS',
             'Access-Control-Allow-Headers' => 'Content-Type, X-Auth-Token, Origin, Authorization',
         ];
 
-        // Utilise download() au lieu de file() pour forcer le mode "pièce jointe"
         return response()->download($absolutePath, $lien->document->Nom_document, $headers);
     }
 
