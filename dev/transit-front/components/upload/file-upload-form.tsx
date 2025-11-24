@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, X, Copy, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Upload, X, Copy, Check, AlertCircle, Loader2, Lock } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -14,17 +14,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import Link from "next/link";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
-// ID de l'utilisateur Anonyme (Ghost User) défini en base de données
-const ANONYMOUS_USER_ID = "9";
+const ANONYMOUS_USER_ID = "9"; // ID de l'utilisateur Anonyme en BDD
 
 export function FileUploadForm({ user }: { user?: any }) {
   const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
-  // Options
+  // Options (Valeurs par défaut)
   const [transferPassword, setTransferPassword] = useState("");
   const [expirationDays, setExpirationDays] = useState("7");
   const [maxDownloads, setMaxDownloads] = useState("unlimited");
@@ -36,14 +36,12 @@ export function FileUploadForm({ user }: { user?: any }) {
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper pour récupérer le token du cookie
   const getToken = () => {
     if (typeof document === "undefined") return null;
     const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
     return match ? match[2] : null;
   };
 
-  // --- Drag & Drop Handlers ---
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -77,7 +75,6 @@ export function FileUploadForm({ user }: { user?: any }) {
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // --- FONCTION PRINCIPALE ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -87,7 +84,7 @@ export function FileUploadForm({ user }: { user?: any }) {
       return;
     }
 
-    // 1. Récupération de l'utilisateur (s'il existe)
+    // Récupération fallback de l'utilisateur
     let currentUser = user;
     if (!currentUser && typeof localStorage !== "undefined") {
       try {
@@ -96,16 +93,13 @@ export function FileUploadForm({ user }: { user?: any }) {
           currentUser = JSON.parse(storedUser);
         }
       } catch (err) {
-        console.error("Erreur lecture user local", err);
+        console.error(err);
       }
     }
-
-    // On ne bloque plus si pas connecté.
 
     setIsUploading(true);
     const token = getToken();
 
-    // Headers conditionnels (Auth si token existe)
     const headers: Record<string, string> = {
       Accept: "application/json",
     };
@@ -114,16 +108,14 @@ export function FileUploadForm({ user }: { user?: any }) {
     }
 
     try {
-      // Étape 1 : Générer un Code Unique
       const uniqueCode = Math.random().toString(36).substring(2, 9);
       const generatedUrl = `${window.location.origin}/download/${uniqueCode}`;
 
       const expirationDate = new Date();
-      expirationDate.setDate(
-        expirationDate.getDate() + parseInt(expirationDays)
-      );
+      // Si l'utilisateur n'est pas connecté, on force 7 jours par défaut, sinon on prend son choix
+      const daysToAdd = currentUser ? parseInt(expirationDays) : 7;
+      expirationDate.setDate(expirationDate.getDate() + daysToAdd);
 
-      // Étape 2 : Upload des fichiers
       const uploadPromises = files.map(async (file) => {
         const formData = new FormData();
         formData.append("document", file);
@@ -131,20 +123,15 @@ export function FileUploadForm({ user }: { user?: any }) {
         formData.append("Tailles_MB", (file.size / (1024 * 1024)).toFixed(4));
         formData.append("IsActive", "1");
 
-        // --- LOGIQUE ID UTILISATEUR ---
         if (currentUser && currentUser.ID) {
-          // Cas Connecté : On utilise son ID
           formData.append("Id_User", currentUser.ID);
         } else {
-          // Cas Anonyme : On force l'ID 9
           formData.append("Id_User", ANONYMOUS_USER_ID);
         }
-        // ------------------------------
 
-        // A. Envoi du fichier
         const resDoc = await fetch("http://localhost:8000/api/documents", {
           method: "POST",
-          headers: headers, // Headers sans Content-Type (géré auto par FormData)
+          headers: headers,
           body: formData,
         });
 
@@ -153,11 +140,9 @@ export function FileUploadForm({ user }: { user?: any }) {
           throw new Error(errData.message || `Failed to upload ${file.name}`);
         }
         const docData = await resDoc.json();
-
         const docId = docData.document_id || docData.id;
 
         if (docId) {
-          // B. Création du LIEN
           const linkBody = {
             Id_Doc: docId,
             Code_unique: uniqueCode,
@@ -165,6 +150,7 @@ export function FileUploadForm({ user }: { user?: any }) {
             Nb_Acces: 0,
             isActive: true,
             Date_Expiration: expirationDate.toISOString(),
+            // Ici on pourrait ajouter le mot de passe si le backend le supportait
           };
 
           await fetch("http://localhost:8000/api/links", {
@@ -204,14 +190,12 @@ export function FileUploadForm({ user }: { user?: any }) {
           <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
             <Check className="w-8 h-8 text-primary" />
           </div>
-
           <div>
             <h2 className="text-2xl font-bold mb-2">Transfer Created!</h2>
             <p className="text-muted-foreground">
               Files uploaded successfully.
             </p>
           </div>
-
           <div className="bg-background p-4 rounded-lg space-y-3">
             <p className="text-sm text-muted-foreground">Share this link:</p>
             <div className="flex items-center gap-2">
@@ -226,11 +210,7 @@ export function FileUploadForm({ user }: { user?: any }) {
                 onClick={copyToClipboard}
                 className="gap-2"
               >
-                {copied ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
@@ -241,7 +221,6 @@ export function FileUploadForm({ user }: { user?: any }) {
               ).toLocaleDateString()}
             </div>
           </div>
-
           <div className="flex gap-3 pt-4 justify-center">
             <Button
               variant="outline"
@@ -339,50 +318,74 @@ export function FileUploadForm({ user }: { user?: any }) {
         </div>
       )}
 
-      <div className="space-y-4 p-4 bg-card border border-border rounded-lg">
-        <h3 className="font-semibold">Transfer Options</h3>
+      {/* --- AFFICHAGE CONDITIONNEL DES OPTIONS --- */}
+      {user ? (
+        // UTILISATEUR CONNECTÉ : Affiche les options
+        <div className="space-y-4 p-4 bg-card border border-border rounded-lg">
+          <h3 className="font-semibold">Transfer Options</h3>
 
-        <div className="space-y-2">
-          <Label htmlFor="password">Password Protection (Optional)</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="Enter password"
-            value={transferPassword}
-            onChange={(e) => setTransferPassword(e.target.value)}
-          />
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="password">Password Protection (Optional)</Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter password"
+              value={transferPassword}
+              onChange={(e) => setTransferPassword(e.target.value)}
+            />
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="expiration">Expires In</Label>
-          <Select value={expirationDays} onValueChange={setExpirationDays}>
-            <SelectTrigger id="expiration">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 Day</SelectItem>
-              <SelectItem value="7">7 Days</SelectItem>
-              <SelectItem value="14">14 Days</SelectItem>
-              <SelectItem value="30">30 Days</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+          <div className="space-y-2">
+            <Label htmlFor="expiration">Expires In</Label>
+            <Select value={expirationDays} onValueChange={setExpirationDays}>
+              <SelectTrigger id="expiration">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 Day</SelectItem>
+                <SelectItem value="7">7 Days</SelectItem>
+                <SelectItem value="14">14 Days</SelectItem>
+                <SelectItem value="30">30 Days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="downloads">Max Downloads</Label>
-          <Select value={maxDownloads} onValueChange={setMaxDownloads}>
-            <SelectTrigger id="downloads">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1">1 Download</SelectItem>
-              <SelectItem value="5">5 Downloads</SelectItem>
-              <SelectItem value="10">10 Downloads</SelectItem>
-              <SelectItem value="unlimited">Unlimited</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="space-y-2">
+            <Label htmlFor="downloads">Max Downloads</Label>
+            <Select value={maxDownloads} onValueChange={setMaxDownloads}>
+              <SelectTrigger id="downloads">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1">1 Download</SelectItem>
+                <SelectItem value="5">5 Downloads</SelectItem>
+                <SelectItem value="10">10 Downloads</SelectItem>
+                <SelectItem value="unlimited">Unlimited</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-      </div>
+      ) : (
+        // UTILISATEUR ANONYME : Affiche un message promotionnel
+        <div className="p-4 bg-secondary/50 border border-border rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center">
+              <Lock className="w-5 h-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium">Want more options?</p>
+              <p className="text-xs text-muted-foreground">
+                Sign in to protect your files with a password and set custom expiration.
+              </p>
+            </div>
+          </div>
+          <Link href="/login">
+            <Button variant="outline" size="sm">
+              Sign In
+            </Button>
+          </Link>
+        </div>
+      )}
 
       <Button
         type="submit"
