@@ -12,6 +12,55 @@
         }
     ],
     "paths": {
+        "/api/admin/stats": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "summary": "Récupérer les statistiques globales de la plateforme",
+                "operationId": "3781a63877fb9197d56d7ecff645c3a5",
+                "responses": {
+                    "200": {
+                        "description": "Statistiques récupérées avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "totalUsers": {
+                                            "type": "integer",
+                                            "example": 150
+                                        },
+                                        "totalTransfers": {
+                                            "type": "integer",
+                                            "example": 340
+                                        },
+                                        "totalDownloads": {
+                                            "type": "integer",
+                                            "example": 1205
+                                        },
+                                        "totalStorage": {
+                                            "type": "number",
+                                            "format": "float",
+                                            "example": 500.25
+                                        },
+                                        "activeTransfers": {
+                                            "type": "integer",
+                                            "example": 45
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/documents": {
             "get": {
                 "tags": [
@@ -237,6 +286,189 @@
                     },
                     "400": {
                         "description": "Erreur lors de la suppression"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/history/{id}": {
+            "get": {
+                "tags": [
+                    "Historique"
+                ],
+                "summary": "Récupérer un historique par son ID",
+                "operationId": "2a471b446bbba31e9cf89cb16f1011c6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'historique",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails de l'historique",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "ID": {
+                                            "type": "integer"
+                                        },
+                                        "Id_Lien": {
+                                            "type": "integer"
+                                        },
+                                        "Action": {
+                                            "type": "string"
+                                        },
+                                        "Date_Action": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "Adresse_IP": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Historique introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/links/{id}/history": {
+            "get": {
+                "tags": [
+                    "Historique"
+                ],
+                "summary": "Récupérer l'historique d'un lien spécifique",
+                "operationId": "0090dca2b7fa97395a991b3594d9d982",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID du lien",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Liste des historiques pour ce lien",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "ID": {
+                                                "type": "integer"
+                                            },
+                                            "Id_Lien": {
+                                                "type": "integer"
+                                            },
+                                            "Action": {
+                                                "type": "string"
+                                            },
+                                            "Date_Action": {
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "Adresse_IP": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Aucun historique trouvé pour ce lien"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/history": {
+            "post": {
+                "tags": [
+                    "Historique"
+                ],
+                "summary": "Ajouter une entrée dans l'historique",
+                "operationId": "633888a2a862582946606944201f6a65",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "Id_Lien",
+                                    "Action",
+                                    "Adresse_IP"
+                                ],
+                                "properties": {
+                                    "Id_Lien": {
+                                        "type": "integer",
+                                        "example": 12
+                                    },
+                                    "Action": {
+                                        "type": "string",
+                                        "example": "download"
+                                    },
+                                    "Adresse_IP": {
+                                        "type": "string",
+                                        "example": "192.168.1.1"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Historique créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erreur lors de la création"
                     }
                 },
                 "security": [
@@ -488,6 +720,490 @@
                 ]
             }
         },
+        "/api/document-params/{id}": {
+            "get": {
+                "tags": [
+                    "ParametreDocument"
+                ],
+                "summary": "Récupérer un paramètre de document par son ID",
+                "operationId": "deb4aa3141b0f8ef65297d8f1b348667",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID du paramètre",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails du paramètre",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "ID": {
+                                            "type": "integer"
+                                        },
+                                        "Protection_MotDePasse": {
+                                            "type": "boolean"
+                                        },
+                                        "Date_Expiration": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "Date_Update": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "Date_Creation": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Paramètre document introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "ParametreDocument"
+                ],
+                "summary": "Mettre à jour les paramètres d'un document",
+                "operationId": "45b4a72a1f258ebec93a92fb034b6ab2",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID du paramètre",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "Protection_MotDePasse": {
+                                        "type": "boolean"
+                                    },
+                                    "Mot_de_passe": {
+                                        "type": "string"
+                                    },
+                                    "Date_Expiration": {
+                                        "type": "string",
+                                        "format": "date"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mise à jour réussie"
+                    },
+                    "404": {
+                        "description": "Paramètre introuvable"
+                    },
+                    "500": {
+                        "description": "Erreur mise à jour"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "ParametreDocument"
+                ],
+                "summary": "Supprimer les paramètres d'un document",
+                "operationId": "567a35528953c863c8e5dbd6abf85f24",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID du paramètre",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Supprimé avec succès"
+                    },
+                    "404": {
+                        "description": "Paramètre introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{id}/document-params": {
+            "get": {
+                "tags": [
+                    "ParametreDocument"
+                ],
+                "summary": "Récupérer les paramètres de document d'un utilisateur",
+                "operationId": "aebe3583e95d3d879ad6efb8b885b966",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paramètre trouvé"
+                    },
+                    "404": {
+                        "description": "Aucun paramètre document trouvé pour cet utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/document-params": {
+            "post": {
+                "tags": [
+                    "ParametreDocument"
+                ],
+                "summary": "Créer des paramètres pour un document",
+                "operationId": "cb79be9be2edf84cb33a79c376100eb4",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "Id_Document"
+                                ],
+                                "properties": {
+                                    "Id_Document": {
+                                        "type": "integer",
+                                        "example": 10
+                                    },
+                                    "Protection_MotDePasse": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "Mot_de_passe": {
+                                        "type": "string",
+                                        "example": "Secret123"
+                                    },
+                                    "Date_Expiration": {
+                                        "type": "string",
+                                        "format": "date",
+                                        "example": "2025-12-31"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Paramètre créé avec succès"
+                    },
+                    "500": {
+                        "description": "Erreur création paramètre"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user-params/{id}": {
+            "get": {
+                "tags": [
+                    "ParametreUser"
+                ],
+                "summary": "Récupérer un paramètre utilisateur par son ID",
+                "operationId": "51aba3b04ce944e3fa5579e10e3139a5",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID du paramètre",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Détails du paramètre",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "ID": {
+                                            "type": "integer"
+                                        },
+                                        "Id_User": {
+                                            "type": "integer"
+                                        },
+                                        "Notification_Mail": {
+                                            "type": "boolean"
+                                        },
+                                        "Langue": {
+                                            "type": "string"
+                                        },
+                                        "Date_Update": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "Date_Creation": {
+                                            "type": "string",
+                                            "format": "date-time"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Paramètre introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "ParametreUser"
+                ],
+                "summary": "Supprimer un paramètre par son ID",
+                "operationId": "d762802c7c5f7c6559348079b07f2673",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID du paramètre",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Supprimé avec succès"
+                    },
+                    "404": {
+                        "description": "Paramètre introuvable"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/users/{id}/params": {
+            "get": {
+                "tags": [
+                    "ParametreUser"
+                ],
+                "summary": "Récupérer les paramètres d'un utilisateur spécifique",
+                "operationId": "fc2e778dc7318197f32508b1c028b752",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paramètres trouvés"
+                    },
+                    "404": {
+                        "description": "Aucun paramètre pour cet utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "ParametreUser"
+                ],
+                "summary": "Mettre à jour les paramètres d'un utilisateur via son ID User",
+                "operationId": "bb34e7967d1569aacee48a2f1afc23b0",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "Notification_Mail": {
+                                        "type": "boolean"
+                                    },
+                                    "Langue": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Mise à jour réussie"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "ParametreUser"
+                ],
+                "summary": "Supprimer les paramètres d'un utilisateur via son ID User",
+                "operationId": "e0533529b7c564f438aab36b7c9f677f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID de l'utilisateur",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Supprimé avec succès"
+                    },
+                    "404": {
+                        "description": "Aucun paramètre trouvé pour cet utilisateur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
+        "/api/user-params": {
+            "post": {
+                "tags": [
+                    "ParametreUser"
+                ],
+                "summary": "Créer ou mettre à jour les paramètres d'un utilisateur",
+                "operationId": "63edc49501cc3be699d73e58b9a15350",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "Id_User"
+                                ],
+                                "properties": {
+                                    "Id_User": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "Notification_Mail": {
+                                        "type": "boolean",
+                                        "example": true
+                                    },
+                                    "Langue": {
+                                        "type": "string",
+                                        "example": "fr"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Paramètres sauvegardés avec succès"
+                    },
+                    "500": {
+                        "description": "Erreur serveur"
+                    }
+                },
+                "security": [
+                    {
+                        "bearerAuth": []
+                    }
+                ]
+            }
+        },
         "/api/users": {
             "get": {
                 "tags": [
@@ -552,17 +1268,90 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Utilisateur créé avec succès"
+                        "description": "Utilisateur créé avec succès",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User created successfully."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Erreur de validation (par exemple Email déjà utilisé)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "validation_error"
+                                        },
+                                        "errors": {
+                                            "type": "object",
+                                            "example": {
+                                                "Email": [
+                                                    "The email has already been taken."
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     },
                     "400": {
-                        "description": "Erreur lors de la création"
+                        "description": "Erreur lors de la création de l'utilisateur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Unable to create user."
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erreur serveur",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "error"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Server error"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
-                },
-                "security": [
-                    {
-                        "bearerAuth": []
-                    }
-                ]
+                }
             }
         },
         "/api/users/{id}": {
@@ -694,12 +1483,28 @@
     },
     "tags": [
         {
+            "name": "Admin",
+            "description": "Admin"
+        },
+        {
             "name": "Documents",
             "description": "Documents"
         },
         {
+            "name": "Historique",
+            "description": "Historique"
+        },
+        {
             "name": "Liens",
             "description": "Liens"
+        },
+        {
+            "name": "ParametreDocument",
+            "description": "ParametreDocument"
+        },
+        {
+            "name": "ParametreUser",
+            "description": "ParametreUser"
         },
         {
             "name": "Users",

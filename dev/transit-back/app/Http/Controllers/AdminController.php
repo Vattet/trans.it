@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Document;
 use App\Models\Lien;
-use OpenApi\Attributes as OA; // Si tu utilises Swagger/OpenAPI
+use OpenApi\Attributes as OA;
 
 class AdminController extends Controller
 {
