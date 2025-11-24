@@ -1,46 +1,3 @@
-INSERT INTO
-    User (
-        Nom,
-        Prenom,
-        Email,
-        Mot_de_passe,
-        IsActive
-    )
-VALUES (
-        'Dupont',
-        'Jean',
-        'jean.dupont@example.com',
-        'hashedpwd1',
-        TRUE
-    ),
-    (
-        'Martin',
-        'Sophie',
-        'sophie.martin@example.com',
-        'hashedpwd2',
-        TRUE
-    ),
-    (
-        'Bernard',
-        'Lucas',
-        'lucas.bernard@example.com',
-        'hashedpwd3',
-        TRUE
-    ),
-    (
-        'Moreau',
-        'Emma',
-        'emma.moreau@example.com',
-        'hashedpwd4',
-        TRUE
-    ),
-    (
-        'Petit',
-        'Hugo',
-        'hugo.petit@example.com',
-        'hashedpwd5',
-        TRUE
-    );
 
 INSERT INTO
     Parametre_User (
@@ -197,4 +154,28 @@ VALUES (
         5,
         'Lien généré',
         '192.168.0.55'
+    );
+
+INSERT INTO
+    User (
+        ID,
+        Nom,
+        Prenom,
+        Email,
+        Mot_de_passe,
+        IsActive,
+        IsAdmin,
+        Date_Update,
+        Date_Creation
+    )
+VALUES (
+        9,
+        'Anonyme',
+        'Guest',
+        'Anonyme',
+        '$2y$10$UnusablePasswordHashForSecurityReasons__________________',
+        1,
+        1,
+        '2025-11-24 14:47:28',
+        '2025-11-24 14:47:28'
     );
