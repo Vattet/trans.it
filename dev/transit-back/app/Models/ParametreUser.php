@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class ParametreUser extends Model
 {
-    protected $table = 'Parametre_Document';
+    protected $table = 'Parametre_User';
     protected $primaryKey = 'ID';
     public $timestamps = false;
 

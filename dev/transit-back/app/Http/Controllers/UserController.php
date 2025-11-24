@@ -223,6 +223,7 @@ class UserController extends Controller
             'Email' => 'sometimes|email|max:255',
             'Mot_de_passe' => 'sometimes|string|min:4',
             'IsActive' => 'sometimes|boolean',
+            'IsAdmin' => 'sometimes|boolean',
         ]);
 
         if (isset($validated['Mot_de_passe'])) {

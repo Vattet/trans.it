@@ -22,7 +22,13 @@ class Parametre_UserHelper
             return null;
         }
     }
-
+    public static function CreateOrUpdate(int $userId, array $data)
+    {
+        return ParametreUser::updateOrCreate(
+            ['Id_User' => $userId],
+            array_merge($data, ['Date_Update' => now()])
+        );
+    }
     /** READ by parameter ID */
     public static function GetParameterById(int $id)
     {

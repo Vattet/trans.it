@@ -5,52 +5,96 @@ import { useRouter } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Trash2, Shield, Search, Loader2 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import {
+  Trash2,
+  Shield,
+  Search,
+  Loader2,
+  Edit,
+  Save,
+  AlertTriangle,
+} from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+// 👇 1. Import du hook de notification
+import { useToast } from "@/components/ui/use-toast";
 
-// Interface correspondant à ton Backend Laravel
 interface User {
-  ID: number; // Ton API renvoie "ID" (majuscule)
+  ID: number;
   Nom: string;
   Prenom: string;
   Email: string;
-  IsActive: boolean; // Pour simuler le statut Admin ou Actif
+  IsActive: boolean;
+  IsAdmin?: boolean;
   Date_Creation: string;
-  role?: string; // Optionnel si tu ajoutes la gestion des rôles plus tard
 }
 
 export function UsersManagement() {
   const router = useRouter();
+  // 👇 2. Initialisation du hook
+  const { toast } = useToast();
+
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isLoading, setIsLoading] = useState(true);
 
-  // Helper pour récupérer le token
+  // Etats Édition
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [editForm, setEditForm] = useState({
+    Nom: "",
+    Prenom: "",
+    Email: "",
+    IsActive: false,
+    IsAdmin: false,
+  });
+
+  // Etats Suppression
+  const [userToDelete, setUserToDelete] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState<number | null>(null);
+
   const getToken = () => {
+    if (typeof document === "undefined") return null;
     const match = document.cookie.match(new RegExp("(^| )token=([^;]+)"));
     return match ? match[2] : null;
   };
 
-  // 1. Charger les utilisateurs depuis l'API
   const fetchUsers = async () => {
     const token = getToken();
     if (!token) {
-      router.push("/login"); // Pas de token ? Retour au login
+      router.push("/login");
       return;
     }
 
     try {
-      // Remplace par la bonne route de ton backend (ex: /api/users)
       const res = await fetch("http://localhost:8000/api/users", {
         headers: {
-          Authorization: `Bearer ${token}`, // Très important : Envoi du token
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
           Accept: "application/json",
         },
       });
 
       if (res.status === 401) {
-        // Token expiré ou invalide
         router.push("/login");
         return;
       }
@@ -58,14 +102,18 @@ export function UsersManagement() {
       if (!res.ok) throw new Error("Failed to fetch users");
 
       const data = await res.json();
-
-      // Adaptation selon si ton API renvoie { data: [...] } ou directement [...]
       const usersList = Array.isArray(data) ? data : data.users || [];
 
       setUsers(usersList);
       setFilteredUsers(usersList);
     } catch (error) {
       console.error("Erreur chargement users:", error);
+      // Petit toast discret en cas d'erreur de chargement
+      toast({
+        variant: "destructive",
+        title: "Erreur",
+        description: "Impossible de charger la liste des utilisateurs.",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -75,7 +123,6 @@ export function UsersManagement() {
     fetchUsers();
   }, []);
 
-  // 2. Filtrer la recherche côté client
   useEffect(() => {
     const lowerTerm = searchTerm.toLowerCase();
     const filtered = users.filter(
@@ -87,9 +134,74 @@ export function UsersManagement() {
     setFilteredUsers(filtered);
   }, [searchTerm, users]);
 
-  // 3. Supprimer un utilisateur (Appel API)
-  const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
+  const handleEditClick = (user: User) => {
+    setEditingUser(user);
+    setEditForm({
+      Nom: user.Nom,
+      Prenom: user.Prenom,
+      Email: user.Email,
+      IsActive: Boolean(user.IsActive),
+      IsAdmin: Boolean(user.IsAdmin),
+    });
+  };
+
+  const handleSaveUser = async () => {
+    if (!editingUser) return;
+    setIsSaving(true);
+    const token = getToken();
+
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/users/${editingUser.ID}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+            Accept: "application/json",
+          },
+          body: JSON.stringify(editForm),
+        }
+      );
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Erreur lors de la mise à jour");
+      }
+
+      const updatedList = users.map((u) =>
+        u.ID === editingUser.ID ? { ...u, ...editForm } : u
+      );
+
+      setUsers(updatedList);
+      setEditingUser(null);
+
+      // Succès
+      toast({
+        title: "Succès",
+        description: "Utilisateur mis à jour avec succès.",
+        className: "bg-green-600 text-white border-none",
+      });
+    } catch (error: any) {
+      console.error("Erreur update:", error);
+
+      // 👇 3. REMPLACEMENT DE L'ALERT PAR TOAST
+      toast({
+        variant: "destructive",
+        title: "Erreur de mise à jour",
+        description: error.message || "Une erreur est survenue.",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!userToDelete) return;
+
+    const id = userToDelete;
+    setUserToDelete(null);
+    setIsDeleting(id);
 
     const token = getToken();
     try {
@@ -102,39 +214,27 @@ export function UsersManagement() {
       });
 
       if (res.ok) {
-        // Mise à jour locale pour éviter de recharger la page
-        const newUsers = users.filter((u) => u.ID !== id);
-        setUsers(newUsers);
-        setFilteredUsers(newUsers); // Note: petit bug visuel fix ici (il faut update filteredUsers aussi)
+        setUsers(users.filter((u) => u.ID !== id));
+        toast({
+          title: "Utilisateur supprimé",
+          description: "Le compte a été supprimé définitivement.",
+        });
       } else {
-        alert("Erreur lors de la suppression");
+        toast({
+          variant: "destructive",
+          title: "Impossible de supprimer",
+          description: "Cet utilisateur a peut-être des fichiers liés.",
+        });
       }
     } catch (error) {
       console.error("Erreur delete:", error);
-    }
-  };
-
-  // 4. Toggle Admin / Statut (Exemple)
-  const toggleStatus = async (user: User) => {
-    // Note: Adapte cette URL selon ton backend. Exemple: changer le statut actif/inactif
-    const token = getToken();
-    try {
-      // Exemple hypothétique d'update
-      /* const res = await fetch(`http://localhost:8000/api/users/${user.ID}`, {
-            method: "PUT", // ou PATCH
-            headers: { ... },
-            body: JSON.stringify({ IsActive: !user.IsActive })
-        });
-        */
-
-      // Pour l'instant, alerte tant que ton backend n'a pas la route update
-      alert(
-        "Fonctionnalité à connecter à ton backend (PUT /api/users/" +
-          user.ID +
-          ")"
-      );
-    } catch (error) {
-      console.error(error);
+      toast({
+        variant: "destructive",
+        title: "Erreur serveur",
+        description: "Impossible de contacter le serveur.",
+      });
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -148,6 +248,10 @@ export function UsersManagement() {
 
   return (
     <div className="space-y-6">
+      {/* ... Le reste de ton JSX reste identique ... */}
+      {/* Je ne le remets pas tout pour économiser de la place, 
+          garde tout ce qu'il y a entre le header et la fin des modales */}
+
       <div>
         <h1 className="text-3xl font-bold mb-2">Users Management</h1>
         <p className="text-muted-foreground">
@@ -172,7 +276,7 @@ export function UsersManagement() {
               <tr className="border-b border-border">
                 <th className="text-left p-3 font-semibold">Name</th>
                 <th className="text-left p-3 font-semibold">Email</th>
-                <th className="text-left p-3 font-semibold">Joined</th>
+                <th className="text-left p-3 font-semibold">Role</th>
                 <th className="text-left p-3 font-semibold">Status</th>
                 <th className="text-left p-3 font-semibold">Actions</th>
               </tr>
@@ -188,8 +292,14 @@ export function UsersManagement() {
                       {user.Prenom} {user.Nom}
                     </td>
                     <td className="p-3 text-muted-foreground">{user.Email}</td>
-                    <td className="p-3 text-sm text-muted-foreground">
-                      {new Date(user.Date_Creation).toLocaleDateString()}
+                    <td className="p-3 text-sm">
+                      {user.IsAdmin ? (
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                          Admin
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">User</span>
+                      )}
                     </td>
                     <td className="p-3">
                       <span
@@ -206,16 +316,16 @@ export function UsersManagement() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => toggleStatus(user)}
+                        onClick={() => handleEditClick(user)}
                         className="gap-1"
                       >
-                        <Shield className="w-3 h-3" />
+                        <Edit className="w-3 h-3" />
                         Edit
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() => handleDelete(user.ID)}
+                        onClick={() => setUserToDelete(user.ID)}
                       >
                         <Trash2 className="w-3 h-3" />
                       </Button>
@@ -240,6 +350,132 @@ export function UsersManagement() {
           Showing {filteredUsers.length} of {users.length} users
         </div>
       </Card>
+
+      {/* --- MODAL D'ÉDITION --- */}
+      <Dialog
+        open={!!editingUser}
+        onOpenChange={(open) => !open && setEditingUser(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Make changes to the user profile here. Click save when you're
+              done.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-prenom">Prénom</Label>
+                <Input
+                  id="edit-prenom"
+                  value={editForm.Prenom}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, Prenom: e.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-nom">Nom</Label>
+                <Input
+                  id="edit-nom"
+                  value={editForm.Nom}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, Nom: e.target.value })
+                  }
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                value={editForm.Email}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, Email: e.target.value })
+                }
+              />
+            </div>
+
+            {/* TOGGLE STATUS */}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label className="text-base">Active Account</Label>
+                <div className="text-xs text-muted-foreground">
+                  User can log in
+                </div>
+              </div>
+              <Switch
+                checked={editForm.IsActive}
+                onCheckedChange={(val) =>
+                  setEditForm({ ...editForm, IsActive: val })
+                }
+              />
+            </div>
+
+            {/* TOGGLE ADMIN (Optionnel) */}
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div className="space-y-0.5">
+                <Label className="text-base">Administrator</Label>
+                <div className="text-xs text-muted-foreground">
+                  Full access to dashboard
+                </div>
+              </div>
+              <Switch
+                checked={editForm.IsAdmin}
+                onCheckedChange={(val) =>
+                  setEditForm({ ...editForm, IsAdmin: val })
+                }
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingUser(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveUser} disabled={isSaving}>
+              {isSaving ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* --- MODAL DE CONFIRMATION SUPPRESSION --- */}
+      <AlertDialog
+        open={!!userToDelete}
+        onOpenChange={(open) => !open && setUserToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-destructive" />
+              Delete User?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              user account and all associated files.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-white hover:bg-destructive/90"
+            >
+              Delete User
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

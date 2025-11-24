@@ -36,35 +36,33 @@ class ParametreUserController extends Controller
     {
         $request->validate([
             'Id_User' => 'required|integer',
-            'Notification_Mail' => 'required|boolean',
-            'Langue' => 'required|string',
+            'Notification_Mail' => 'boolean',
+            'Langue' => 'string|max:10'
         ]);
 
-        $param = Parametre_UserHelper::InsertParamUser($request->all());
+        $data = [
+            'Notification_Mail' => $request->input('Notification_Mail', false), // false par défaut
+            'Langue' => $request->input('Langue', 'fr'),             // 'fr' par défaut
+        ];
 
-        if (!$param) {
-            return response()->json(['error' => 'Erreur création paramètre'], 500);
+        try {
+            $param = Parametre_UserHelper::CreateOrUpdate($request->Id_User, $data);
+
+            return response()->json($param, 200);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Erreur serveur lors de la sauvegarde des paramètres',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json($param, 201);
     }
 
-    /** UPDATE */
-    public function update(Request $request, $userId)
+    public function update(Request $request, $id)
     {
-        $status = Parametre_UserHelper::UpdateParameterByUserId($userId, $request->all());
-
-        if ($status === "not_found") {
-            return response()->json(['error' => 'Paramètre introuvable'], 404);
-        }
-
-        if ($status !== "success") {
-            return response()->json(['error' => 'Erreur mise à jour'], 500);
-        }
-
-        return response()->json(['status' => 'success']);
+        $request->merge(['Id_User' => $id]);
+        return $this->store($request);
     }
-
     /** DELETE by parameter ID */
     public function deleteByParamId($id)
     {
