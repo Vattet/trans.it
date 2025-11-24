@@ -1,11 +1,10 @@
 "use client";
 
 import type React from "react";
-
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { LogOut, Settings, Upload } from "lucide-react";
+import { LogOut, Settings, Upload, Shield } from "lucide-react"; // Ajout de Shield
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -16,15 +15,15 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
   const router = useRouter();
 
   const handleLogout = () => {
-
-    localStorage.removeItem("user"); 
-
+    localStorage.removeItem("user");
     document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
-
     router.refresh();
     router.push("/");
   };
-  
+
+  // Vérification flexible (IsAdmin ou isAdmin)
+  const isAdmin = user?.IsAdmin || user?.isAdmin;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -40,6 +39,20 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
           </Link>
 
           <nav className="flex items-center gap-2">
+            {/* Bouton Admin (Visible uniquement pour les admins) */}
+            {isAdmin && (
+              <Link href="/admin">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                  title="Administration Panel"
+                >
+                  <Shield className="w-4 h-4" />
+                </Button>
+              </Link>
+            )}
+
             <Link href="/upload">
               <Button
                 variant="outline"
@@ -50,11 +63,13 @@ export function DashboardLayout({ children, user }: DashboardLayoutProps) {
                 <span className="hidden sm:inline">New Transfer</span>
               </Button>
             </Link>
+
             <Link href="/settings">
               <Button variant="ghost" size="sm">
                 <Settings className="w-4 h-4" />
               </Button>
             </Link>
+
             <Button variant="ghost" size="sm" onClick={handleLogout}>
               <LogOut className="w-4 h-4" />
             </Button>

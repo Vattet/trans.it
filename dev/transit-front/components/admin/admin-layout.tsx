@@ -81,7 +81,7 @@ export function AdminLayout({ children, admin }: AdminLayoutProps) {
                 <DropdownMenuLabel>Admin Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => router.push("/admin/settings")}
+                  onClick={() => router.push("/settings")}
                 >
                   <Settings className="w-4 h-4 mr-2" />
                   Settings

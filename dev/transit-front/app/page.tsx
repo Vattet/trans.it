@@ -10,23 +10,40 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import { useLanguage } from "@/lib/use-language";
 import { t } from "@/lib/translations";
 // Imports pour le header connecté
-import { LogOut, Settings, Upload, LayoutDashboard } from "lucide-react";
+import {
+  LogOut,
+  Settings,
+  Upload,
+  LayoutDashboard,
+  Shield,
+} from "lucide-react"; // Ajout de Shield
 
 export default function Home() {
   const { language } = useLanguage();
   const router = useRouter();
 
-  // État pour savoir si l'utilisateur est connecté
+  // États
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // Nouvel état pour l'admin
   const [isLoading, setIsLoading] = useState(true);
 
   // 1. Vérification de la connexion au chargement
   useEffect(() => {
     const hasToken = document.cookie.includes("token=");
-    const hasUser = localStorage.getItem("user");
+    const userStr = localStorage.getItem("user");
 
-    if (hasToken && hasUser) {
+    if (hasToken && userStr) {
       setIsLoggedIn(true);
+
+      // Vérification Admin
+      try {
+        const userData = JSON.parse(userStr);
+        if (userData.IsAdmin || userData.isAdmin) {
+          setIsAdmin(true);
+        }
+      } catch (e) {
+        console.error(e);
+      }
     }
     setIsLoading(false);
   }, []);
@@ -36,7 +53,8 @@ export default function Home() {
     localStorage.removeItem("user");
     document.cookie = "token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;";
 
-    setIsLoggedIn(false); // On met à jour l'état local
+    setIsLoggedIn(false);
+    setIsAdmin(false);
     router.refresh();
   };
 
@@ -64,6 +82,20 @@ export default function Home() {
               {isLoggedIn ? (
                 // --- VERSION CONNECTÉ (Dashboard Header) ---
                 <>
+                  {/* Bouton Admin (Visible uniquement pour les admins) */}
+                  {isAdmin && (
+                    <Link href="/admin">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-purple-600 hover:text-purple-700 hover:bg-purple-50"
+                        title="Administration Panel"
+                      >
+                        <Shield className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  )}
+
                   <Link href="/upload">
                     <Button
                       variant="outline"
@@ -111,8 +143,6 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      {/* Note: La HeroSection gère sa propre logique interne si tu as utilisé le code précédent, 
-          sinon tu peux lui passer isLoggedIn en props */}
       <HeroSection />
 
       {/* Features Section */}
