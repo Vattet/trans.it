@@ -1,5 +1,3 @@
-CREATE DATABASE transit;
-
 use transit;
 
 CREATE TABLE User (
