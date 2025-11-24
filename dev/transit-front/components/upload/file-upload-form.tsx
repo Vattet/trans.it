@@ -1,12 +1,20 @@
 "use client";
 
 import type React from "react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Upload, X, Copy, Check, AlertCircle, Loader2, Lock } from "lucide-react";
+import {
+  Upload,
+  X,
+  Copy,
+  Check,
+  AlertCircle,
+  Loader2,
+  Lock,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,16 +23,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Link from "next/link";
+import { getFilesToTransfer } from "@/lib/file-store";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
-const ANONYMOUS_USER_ID = "9"; // ID de l'utilisateur Anonyme en BDD
+const ANONYMOUS_USER_ID = "9";
 
 export function FileUploadForm({ user }: { user?: any }) {
   const router = useRouter();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
 
-  // Options (Valeurs par défaut)
+  // Options
   const [transferPassword, setTransferPassword] = useState("");
   const [expirationDays, setExpirationDays] = useState("7");
   const [maxDownloads, setMaxDownloads] = useState("unlimited");
@@ -35,6 +44,14 @@ export function FileUploadForm({ user }: { user?: any }) {
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const incomingFiles = getFilesToTransfer();
+    if (incomingFiles && incomingFiles.length > 0) {
+      // On ne garde que le premier fichier si plusieurs arrivent
+      setFiles([incomingFiles[0]]);
+    }
+  }, []);
 
   const getToken = () => {
     if (typeof document === "undefined") return null;
@@ -52,27 +69,33 @@ export function FileUploadForm({ user }: { user?: any }) {
     e.preventDefault();
     setIsDragging(false);
     setError("");
-    validateAndAddFiles(Array.from(e.dataTransfer.files));
+    // On ne prend que le premier fichier droppé
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      validateAndAddFile(droppedFiles[0]);
+    }
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    validateAndAddFiles(Array.from(e.target.files || []));
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length > 0) {
+      validateAndAddFile(selectedFiles[0]);
+    }
   };
 
-  const validateAndAddFiles = (newFiles: File[]) => {
-    const totalSize = [...files, ...newFiles].reduce(
-      (acc, file) => acc + file.size,
-      0
-    );
-    if (totalSize > MAX_FILE_SIZE) {
-      setError("Total file size exceeds 2GB limit");
+  // Modification pour ne gérer qu'un seul fichier
+  const validateAndAddFile = (file: File) => {
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File size exceeds 2GB limit");
       return;
     }
-    setFiles((prev) => [...prev, ...newFiles]);
+    // REMPLACEMENT : On écrase le tableau avec le nouveau fichier unique
+    setFiles([file]);
   };
 
-  const removeFile = (index: number) => {
-    setFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeFile = () => {
+    setFiles([]); // On vide tout simplement la liste
+    setError(""); // On nettoie les erreurs potentielles
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,11 +103,10 @@ export function FileUploadForm({ user }: { user?: any }) {
     setError("");
 
     if (files.length === 0) {
-      setError("Please select at least one file");
+      setError("Please select a file");
       return;
     }
 
-    // Récupération fallback de l'utilisateur
     let currentUser = user;
     if (!currentUser && typeof localStorage !== "undefined") {
       try {
@@ -112,60 +134,56 @@ export function FileUploadForm({ user }: { user?: any }) {
       const generatedUrl = `${window.location.origin}/download/${uniqueCode}`;
 
       const expirationDate = new Date();
-      // Si l'utilisateur n'est pas connecté, on force 7 jours par défaut, sinon on prend son choix
       const daysToAdd = currentUser ? parseInt(expirationDays) : 7;
       expirationDate.setDate(expirationDate.getDate() + daysToAdd);
 
-      const uploadPromises = files.map(async (file) => {
-        const formData = new FormData();
-        formData.append("document", file);
-        formData.append("Nom_document", file.name);
-        formData.append("Tailles_MB", (file.size / (1024 * 1024)).toFixed(4));
-        formData.append("IsActive", "1");
+      // On traite uniquement le fichier unique (files[0])
+      const file = files[0];
 
-        if (currentUser && currentUser.ID) {
-          formData.append("Id_User", currentUser.ID);
-        } else {
-          formData.append("Id_User", ANONYMOUS_USER_ID);
-        }
+      const formData = new FormData();
+      formData.append("document", file);
+      formData.append("Nom_document", file.name);
+      formData.append("Tailles_MB", (file.size / (1024 * 1024)).toFixed(4));
+      formData.append("IsActive", "1");
 
-        const resDoc = await fetch("http://localhost:8000/api/documents", {
-          method: "POST",
-          headers: headers,
-          body: formData,
-        });
+      if (currentUser && currentUser.ID) {
+        formData.append("Id_User", currentUser.ID);
+      } else {
+        formData.append("Id_User", ANONYMOUS_USER_ID);
+      }
 
-        if (!resDoc.ok) {
-          const errData = await resDoc.json().catch(() => ({}));
-          throw new Error(errData.message || `Failed to upload ${file.name}`);
-        }
-        const docData = await resDoc.json();
-        const docId = docData.document_id || docData.id;
-
-        if (docId) {
-          const linkBody = {
-            Id_Doc: docId,
-            Code_unique: uniqueCode,
-            URL: generatedUrl,
-            Nb_Acces: 0,
-            isActive: true,
-            Date_Expiration: expirationDate.toISOString(),
-            // Ici on pourrait ajouter le mot de passe si le backend le supportait
-          };
-
-          await fetch("http://localhost:8000/api/links", {
-            method: "POST",
-            headers: {
-              ...headers,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(linkBody),
-          });
-        }
-        return docData;
+      const resDoc = await fetch("http://localhost:8000/api/documents", {
+        method: "POST",
+        headers: headers,
+        body: formData,
       });
 
-      await Promise.all(uploadPromises);
+      if (!resDoc.ok) {
+        const errData = await resDoc.json().catch(() => ({}));
+        throw new Error(errData.message || `Failed to upload ${file.name}`);
+      }
+      const docData = await resDoc.json();
+      const docId = docData.document_id || docData.id;
+
+      if (docId) {
+        const linkBody = {
+          Id_Doc: docId,
+          Code_unique: uniqueCode,
+          URL: generatedUrl,
+          Nb_Acces: 0,
+          isActive: true,
+          Date_Expiration: expirationDate.toISOString(),
+        };
+
+        await fetch("http://localhost:8000/api/links", {
+          method: "POST",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(linkBody),
+        });
+      }
 
       setTransferLink(generatedUrl);
       setUploadComplete(true);
@@ -192,9 +210,7 @@ export function FileUploadForm({ user }: { user?: any }) {
           </div>
           <div>
             <h2 className="text-2xl font-bold mb-2">Transfer Created!</h2>
-            <p className="text-muted-foreground">
-              Files uploaded successfully.
-            </p>
+            <p className="text-muted-foreground">File uploaded successfully.</p>
           </div>
           <div className="bg-background p-4 rounded-lg space-y-3">
             <p className="text-sm text-muted-foreground">Share this link:</p>
@@ -210,7 +226,11 @@ export function FileUploadForm({ user }: { user?: any }) {
                 onClick={copyToClipboard}
                 className="gap-2"
               >
-                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {copied ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
                 {copied ? "Copied" : "Copy"}
               </Button>
             </div>
@@ -246,42 +266,45 @@ export function FileUploadForm({ user }: { user?: any }) {
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Send Files</h1>
+        <h1 className="text-3xl font-bold mb-2">Send File</h1>
         <p className="text-muted-foreground">
-          Upload your files and share instantly
+          Upload your file and share instantly
         </p>
       </div>
 
-      <div
-        className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
-          isDragging
-            ? "border-primary bg-primary/5"
-            : "border-border hover:border-primary/50"
-        }`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-        <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-        <p className="text-base font-medium mb-1">
-          Drag and drop files here or{" "}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="text-primary hover:underline font-medium"
-          >
-            browse
-          </button>
-        </p>
-        <p className="text-sm text-muted-foreground">Max 2GB per transfer</p>
-      </div>
+      {/* --- UPLOAD ZONE (Cachée si un fichier est déjà présent) --- */}
+      {files.length === 0 && (
+        <div
+          className={`border-2 border-dashed rounded-lg p-12 text-center transition-colors ${
+            isDragging
+              ? "border-primary bg-primary/5"
+              : "border-border hover:border-primary/50"
+          }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Retrait de 'multiple' */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+          <Upload className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+          <p className="text-base font-medium mb-1">
+            Drag and drop file here or{" "}
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-primary hover:underline font-medium"
+            >
+              browse
+            </button>
+          </p>
+          <p className="text-sm text-muted-foreground">Max 2GB per transfer</p>
+        </div>
+      )}
 
       {error && (
         <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-lg flex gap-2 text-sm text-destructive">
@@ -290,37 +313,32 @@ export function FileUploadForm({ user }: { user?: any }) {
         </div>
       )}
 
+      {/* --- FILE DISPLAY (Affiché uniquement si un fichier est sélectionné) --- */}
       {files.length > 0 && (
         <div className="space-y-2">
-          <Label>Selected Files ({files.length})</Label>
-          <div className="bg-card border border-border rounded-lg p-4 space-y-2 max-h-48 overflow-y-auto">
-            {files.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-2 hover:bg-background rounded transition"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(file.size / (1024 * 1024)).toFixed(2)} MB
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => removeFile(index)}
-                  className="ml-2 p-1 hover:bg-destructive/10 rounded transition"
-                >
-                  <X className="w-4 h-4 text-destructive" />
-                </button>
+          <Label>Selected File</Label>
+          <div className="bg-card border border-border rounded-lg p-4">
+            <div className="flex items-center justify-between p-2 hover:bg-background rounded transition">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium truncate">{files[0].name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {(files[0].size / (1024 * 1024)).toFixed(2)} MB
+                </p>
               </div>
-            ))}
+              <button
+                type="button"
+                onClick={removeFile}
+                className="ml-2 p-1 hover:bg-destructive/10 rounded transition"
+              >
+                <X className="w-4 h-4 text-destructive" />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* --- AFFICHAGE CONDITIONNEL DES OPTIONS --- */}
+      {/* --- OPTIONS --- */}
       {user ? (
-        // UTILISATEUR CONNECTÉ : Affiche les options
         <div className="space-y-4 p-4 bg-card border border-border rounded-lg">
           <h3 className="font-semibold">Transfer Options</h3>
 
@@ -366,7 +384,6 @@ export function FileUploadForm({ user }: { user?: any }) {
           </div>
         </div>
       ) : (
-        // UTILISATEUR ANONYME : Affiche un message promotionnel
         <div className="p-4 bg-secondary/50 border border-border rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-background rounded-full flex items-center justify-center">
@@ -375,7 +392,8 @@ export function FileUploadForm({ user }: { user?: any }) {
             <div>
               <p className="text-sm font-medium">Want more options?</p>
               <p className="text-xs text-muted-foreground">
-                Sign in to protect your files with a password and set custom expiration.
+                Sign in to protect your files with a password and set custom
+                expiration.
               </p>
             </div>
           </div>
