@@ -28,7 +28,10 @@ class Parametre_DocumentHelper
     {
         return ParametreDocument::find($id);
     }
-
+    public static function GetParamByUserId(int $userId)
+    {
+        return ParametreDocument::where('Id_User', $userId)->first();
+    }
     /** UPDATE */
     public static function UpdateParamById(int $id, array $data)
     {

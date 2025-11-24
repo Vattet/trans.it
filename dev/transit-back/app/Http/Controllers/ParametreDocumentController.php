@@ -17,6 +17,16 @@ class ParametreDocumentController extends Controller
 
         return response()->json($param);
     }
+    public function getByUserId($userId)
+    {
+        $param = Parametre_DocumentHelper::GetParamByUserId($userId);
+
+        if (!$param) {
+            return response()->json(['error' => 'Aucun paramètre document trouvé pour cet utilisateur'], 404);
+        }
+
+        return response()->json($param);
+    }
 
     public function store(Request $request)
     {

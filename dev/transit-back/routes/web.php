@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\HistoriqueController;
 use App\Http\Controllers\LienController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
@@ -37,20 +38,24 @@ Route::get('/api/public/links/{code}', [LienController::class, 'getByCode']);
 Route::post('/public/download/{code}', [LienController::class, 'downloadFile']);
 Route::get('/public/download/{code}', [LienController::class, 'downloadFileV2']);
 
-Route::get('/user-params/{id}', [ParametreUserController::class, 'getById']);
-Route::get('/users/{id}/params', [ParametreUserController::class, 'getByUserId']);
+Route::get('/api/user-params/{id}', [ParametreUserController::class, 'getById']);
+Route::get('/api/users/{id}/params', [ParametreUserController::class, 'getByUserId']);
 
-Route::post('/user-params', [ParametreUserController::class, 'store']);
-Route::put('/users/{id}/params', [ParametreUserController::class, 'update']);
-Route::delete('/user-params/{id}', [ParametreUserController::class, 'deleteByParamId']);
-Route::delete('/users/{id}/params', [ParametreUserController::class, 'deleteByUserId']);
+Route::post('/api/user-params', [ParametreUserController::class, 'store']);
+Route::put('/api/users/{id}/params', [ParametreUserController::class, 'update']);
+Route::delete('/api/user-params/{id}', [ParametreUserController::class, 'deleteByParamId']);
+Route::delete('/api/users/{id}/params', [ParametreUserController::class, 'deleteByUserId']);
 
-Route::get('/document-params/{id}', [ParametreDocumentController::class, 'getById']);
-Route::post('/document-params',       [ParametreDocumentController::class, 'store']);
-Route::put('/document-params/{id}',   [ParametreDocumentController::class, 'update']);
-Route::delete('/document-params/{id}',[ParametreDocumentController::class, 'delete']);
+Route::get('/api/document-params/{id}', [ParametreDocumentController::class, 'getById']);
+Route::post('/api/document-params',       [ParametreDocumentController::class, 'store']);
+Route::put('/api/document-params/{id}',   [ParametreDocumentController::class, 'update']);
+Route::delete('/api/document-params/{id}',[ParametreDocumentController::class, 'delete']);
 
+Route::get('/api/users/{id}/document-params', [ParametreDocumentController::class, 'getByUserId']);
 
+Route::get('/api/history/{id}', [HistoriqueController::class, 'getById']);
+Route::get('/api/links/{id}/history', [HistoriqueController::class, 'getByLinkId']);
+Route::post('/api/history', [HistoriqueController::class, 'store']);
 
 Route::get('/api/admin/stats', [AdminController::class, 'getStats']);
 
