@@ -14,50 +14,48 @@ Route::get('/', function () {
     return redirect('/api/documentation');
 });
 
-Route::get('/api/documents', [DocumentController::class, 'getAll']);
-Route::get('/api/documents/{id}', [DocumentController::class, 'show']);
-Route::get('/api/documents/{id}/link', [LienController::class, 'getByDocument']);
-Route::post('/api/documents', [DocumentController::class, 'store']);
-Route::put('/api/documents/{id}', [DocumentController::class, 'update']);
-Route::delete('/api/documents/{id}', [DocumentController::class, 'destroy']);
+Route::get('/api/documents',                    [DocumentController::class, 'getAll']);
+Route::get('/api/documents/{id}',               [DocumentController::class, 'show']);
+Route::post('/api/documents',                   [DocumentController::class, 'store']);
+Route::put('/api/documents/{id}',               [DocumentController::class, 'update']);
+Route::delete('/api/documents/{id}',            [DocumentController::class, 'destroy']);
+Route::get('/api/users/{id}/documents',         [DocumentController::class, 'getAllByUser']);
 
-Route::get('/api/users/{id}/documents', [DocumentController::class, 'getAllByUser']);
-Route::get('/api/users', [UserController::class, 'getAll']);
-Route::get('/api/users/{id}', [UserController::class, 'show']);
-Route::post('/api/users', [UserController::class, 'store']);
-Route::post('/api/users/login', [UserController::class, 'login']);
-Route::put('/api/users/{id}', [UserController::class, 'update']);
-Route::delete('/api/users/{id}', [UserController::class, 'destroy']);
+Route::get('/api/users',                        [UserController::class,     'getAll']);
+Route::get('/api/users/{id}',                   [UserController::class,     'show']);
+Route::post('/api/users',                       [UserController::class,     'store']);
+Route::post('/api/users/login',                 [UserController::class,     'login']);
+Route::put('/api/users/{id}',                   [UserController::class,     'update']);
+Route::delete('/api/users/{id}',                [UserController::class,     'destroy']);
 
-Route::post('/api/links', [LienController::class, 'store']);
-Route::get('/api/links', [LienController::class, 'getAll']);
-Route::get('/api/users/{id}/links', [LienController::class, 'getAllByUser']);
-Route::put('/api/links/{id}', [LienController::class, 'update']);
-Route::delete('/api/links/{id}', [LienController::class, 'destroy']);
-Route::get('/api/public/links/{code}', [LienController::class, 'getByCode']);
-Route::post('/public/download/{code}', [LienController::class, 'downloadFile']);
-Route::get('/public/download/{code}', [LienController::class, 'downloadFileV2']);
+Route::get('/api/documents/{id}/link',          [LienController::class, 'getByDocument']);
+Route::post('/api/links',                       [LienController::class, 'store']);
+Route::get('/api/links',                        [LienController::class, 'getAll']);
+Route::get('/api/users/{id}/links',             [LienController::class, 'getAllByUser']);
+Route::put('/api/links/{id}',                   [LienController::class, 'update']);
+Route::delete('/api/links/{id}',                [LienController::class, 'destroy']);
+Route::get('/api/public/links/{code}',          [LienController::class, 'getByCode']);
+Route::post('/public/download/{code}',          [LienController::class, 'downloadFile']);
+Route::get('/public/download/{code}',           [LienController::class, 'downloadFileV2']);
 
-Route::get('/api/user-params/{id}', [ParametreUserController::class, 'getById']);
-Route::get('/api/users/{id}/params', [ParametreUserController::class, 'getByUserId']);
+Route::get('/api/user-params/{id}',             [ParametreUserController::class, 'getById']);
+Route::get('/api/users/{id}/params',            [ParametreUserController::class, 'getByUserId']);
+Route::post('/api/user-params',                 [ParametreUserController::class, 'store']);
+Route::put('/api/users/{id}/params',            [ParametreUserController::class, 'update']);
+Route::delete('/api/user-params/{id}',          [ParametreUserController::class, 'deleteByParamId']);
+Route::delete('/api/users/{id}/params',         [ParametreUserController::class, 'deleteByUserId']);
 
-Route::post('/api/user-params', [ParametreUserController::class, 'store']);
-Route::put('/api/users/{id}/params', [ParametreUserController::class, 'update']);
-Route::delete('/api/user-params/{id}', [ParametreUserController::class, 'deleteByParamId']);
-Route::delete('/api/users/{id}/params', [ParametreUserController::class, 'deleteByUserId']);
+Route::get('/api/document-params/{id}',         [ParametreDocumentController::class, 'getById']);
+Route::post('/api/document-params',             [ParametreDocumentController::class, 'store']);
+Route::put('/api/document-params/{id}',         [ParametreDocumentController::class, 'update']);
+Route::delete('/api/document-params/{id}',      [ParametreDocumentController::class, 'delete']);
+Route::get('/api/users/{id}/document-params',   [ParametreDocumentController::class, 'getByUserId']);
 
-Route::get('/api/document-params/{id}', [ParametreDocumentController::class, 'getById']);
-Route::post('/api/document-params',       [ParametreDocumentController::class, 'store']);
-Route::put('/api/document-params/{id}',   [ParametreDocumentController::class, 'update']);
-Route::delete('/api/document-params/{id}',[ParametreDocumentController::class, 'delete']);
+Route::get('/api/history/{id}',                 [HistoriqueController::class, 'getById']);
+Route::get('/api/links/{id}/history',           [HistoriqueController::class, 'getByLinkId']);
+Route::post('/api/history',                     [HistoriqueController::class, 'store']);
 
-Route::get('/api/users/{id}/document-params', [ParametreDocumentController::class, 'getByUserId']);
-
-Route::get('/api/history/{id}', [HistoriqueController::class, 'getById']);
-Route::get('/api/links/{id}/history', [HistoriqueController::class, 'getByLinkId']);
-Route::post('/api/history', [HistoriqueController::class, 'store']);
-
-Route::get('/api/admin/stats', [AdminController::class, 'getStats']);
+Route::get('/api/admin/stats',                  [AdminController::class, 'getStats']);
 
 
 /*
