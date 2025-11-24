@@ -7,6 +7,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ParametreUserController;
+use App\Http\Controllers\ParametreDocumentController;
 
 Route::get('/', function () {
     return redirect('/api/documentation');
@@ -41,9 +42,15 @@ Route::get('/users/{id}/params', [ParametreUserController::class, 'getByUserId']
 
 Route::post('/user-params', [ParametreUserController::class, 'store']);
 Route::put('/users/{id}/params', [ParametreUserController::class, 'update']);
-
 Route::delete('/user-params/{id}', [ParametreUserController::class, 'deleteByParamId']);
 Route::delete('/users/{id}/params', [ParametreUserController::class, 'deleteByUserId']);
+
+Route::get('/document-params/{id}', [ParametreDocumentController::class, 'getById']);
+Route::post('/document-params',       [ParametreDocumentController::class, 'store']);
+Route::put('/document-params/{id}',   [ParametreDocumentController::class, 'update']);
+Route::delete('/document-params/{id}',[ParametreDocumentController::class, 'delete']);
+
+
 
 Route::get('/api/admin/stats', [AdminController::class, 'getStats']);
 
