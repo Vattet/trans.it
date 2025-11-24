@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ParametreUserController;
 
 Route::get('/', function () {
     return redirect('/api/documentation');
@@ -35,7 +36,17 @@ Route::get('/api/public/links/{code}', [LienController::class, 'getByCode']);
 Route::post('/public/download/{code}', [LienController::class, 'downloadFile']);
 Route::get('/public/download/{code}', [LienController::class, 'downloadFileV2']);
 
+Route::get('/user-params/{id}', [ParametreUserController::class, 'getById']);
+Route::get('/users/{id}/params', [ParametreUserController::class, 'getByUserId']);
+
+Route::post('/user-params', [ParametreUserController::class, 'store']);
+Route::put('/users/{id}/params', [ParametreUserController::class, 'update']);
+
+Route::delete('/user-params/{id}', [ParametreUserController::class, 'deleteByParamId']);
+Route::delete('/users/{id}/params', [ParametreUserController::class, 'deleteByUserId']);
+
 Route::get('/api/admin/stats', [AdminController::class, 'getStats']);
+
 
 /*
 
