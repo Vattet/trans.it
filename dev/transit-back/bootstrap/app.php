@@ -11,17 +11,27 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+
+        // ❌ Désactivation totale du CSRF
         $middleware->validateCsrfTokens(except: [
-            'public/downloadV2/*',
+            '*', // Toutes les routes ignorent le CSRF
+        ]);
+
+        // ❌ Suppression du middleware Sanctum stateful (cookies front→back)
+        $middleware->web(remove: [
+            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
         ]);
     })
     ->withMiddleware(function (Middleware $middleware): void {
+
+        // ✔️ Remplacement du middleware Sanctum : aucune gestion de cookies/session
         $middleware->alias([
-            'auth:sanctum' => \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            'auth:sanctum' => \Illuminate\Auth\Middleware\Authenticate::class,
             'abilities' => \Laravel\Sanctum\Http\Middleware\CheckAbilities::class,
             'ability' => \Laravel\Sanctum\Http\Middleware\CheckForAnyAbility::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+    ->create();
