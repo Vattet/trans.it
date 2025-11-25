@@ -1,7 +1,4 @@
 services:
-  # ================================
-  # 1. MARIA DB
-  # ================================
   db:
     image: mariadb:latest
     container_name: transit-db
@@ -20,9 +17,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # ================================
-  # 2. BACKEND LARAVEL
-  # ================================
   backend:
     build: ./dev/transit-back
     container_name: transit-back
@@ -71,9 +65,6 @@ services:
       retries: 10
       start_period: 40s
 
-  # ================================
-  # 3. FRONTEND
-  # ================================
   frontend:
     build: ./dev/transit-front
     container_name: transit-front
