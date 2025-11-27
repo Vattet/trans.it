@@ -41,7 +41,7 @@ docker pull mariadb:latest
 Clonez le projet pour obtenir le fichier docker-compose.yml :
 
 ```
-git clone https://github.com/Vattet/trans.it.git
+git clone git@github.com:Vattet/trans.it.git
 ```
 
 Placez-vous ensuite dans le dossier :
@@ -57,7 +57,7 @@ cd trans.it
 Dans le dossier contenant le fichier docker-compose.yml, exécutez :
 
 ```
-docker compose up -d
+sudo docker compose up -d
 ```
 
 Les services suivants se lanceront automatiquement :
@@ -93,5 +93,8 @@ Email : admin@transit.it
 Password : admin
 ```
 
+## 8. Lien draw.io diagrammes
+
+draw.io : https://drive.google.com/file/d/1tfRwbqgYUqc-3FdjPXYj9X8YIoXLCVzU/view?usp=sharing
 ---
 
